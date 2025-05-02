@@ -22,6 +22,7 @@ import androidx.activity.compose.setContent
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import com.example.doancuoiky.Activity.Auth.LoginActivity
 import com.example.doancuoiky.Activity.BaseActivity
 import com.example.doancuoiky.R
 import com.example.doancuoiky.Activity.Dashboard.MainActivity
@@ -32,15 +33,22 @@ class SplashActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            SplashScreen(onGetStartedClick = {
-                startActivity(Intent(this, MainActivity::class.java))
-            })
+            SplashScreen(
+                onGetStartedClick = {
+                    startActivity(Intent(this, MainActivity::class.java))
+                },
+                onLoginClick = {
+                    startActivity(Intent(this, LoginActivity::class.java))
+                }
+            )
         }
     }
 }
 
 @Composable
-fun SplashScreen(onGetStartedClick:()->Unit) {
+fun SplashScreen(
+    onGetStartedClick:()->Unit,
+    onLoginClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -98,6 +106,7 @@ fun SplashScreen(onGetStartedClick:()->Unit) {
         )
 
         GetStartedButton(onClick = onGetStartedClick,
+            onLoginClick = onLoginClick,
             modifier = Modifier
                 .padding(top = 16.dp)
         )
@@ -107,5 +116,7 @@ fun SplashScreen(onGetStartedClick:()->Unit) {
 @Preview
 @Composable
 fun PreviewSplashScreen() {
-    SplashScreen(onGetStartedClick = {})
+    SplashScreen(
+        onGetStartedClick = {},
+        onLoginClick = {})
 }

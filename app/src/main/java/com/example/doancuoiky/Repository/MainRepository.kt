@@ -1,6 +1,7 @@
 package com.example.doancuoiky.Repository
 
 import android.app.DownloadManager
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.doancuoiky.Domain.BannerModel
@@ -54,8 +55,10 @@ class MainRepository {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                TODO("Not yet implemented")
+                Log.e("MainRepository", "Firebase error: ${error.message}")
+                // hoặc bạn có thể thông báo lỗi cho ViewModel / UI
             }
+
 
         })
         return listData

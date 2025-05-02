@@ -15,14 +15,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.constraintlayout.compose.Dimension.Companion.value
-import com.example.doancuoiky.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.doancuoiky.R
 import com.example.doancuoiky.Activity.Cart.CartActivity
-
+import com.example.doancuoiky.Activity.Profile.ProfileActivity // Thêm import này
 
 @Composable
 @Preview
@@ -33,25 +32,37 @@ fun MyBottomBar() {
 
     BottomAppBar(
         backgroundColor = colorResource(R.color.grey),
-        elevation=3.dp
+        elevation = 3.dp
     ) {
         bottomMenuItemsList.forEach { bottomMenuItem ->
             BottomNavigationItem(
-                selected =(selectedItem==bottomMenuItem.label),
-                onClick={
-                    selectedItem=bottomMenuItem.label
-                    if(bottomMenuItem.label=="Cart"){
-                        context.startActivity(Intent(context, CartActivity::class.java))
-                    }else{
-                        Toast.makeText(context,bottomMenuItem.label, Toast.LENGTH_SHORT).show()
+                selected = (selectedItem == bottomMenuItem.label),
+                onClick = {
+                    selectedItem = bottomMenuItem.label
+                    when (bottomMenuItem.label) {
+                        "Cart" -> {
+                            context.startActivity(Intent(context, CartActivity::class.java))
+                        }
+                        "Profile" -> {
+                            val intent = Intent(context, ProfileActivity::class.java).apply {
+                                putExtra("userName", "Nguyen Van A") // Truyền dữ liệu
+                                putExtra("userEmail", "nguyenvana@example.com")
+                            }
+                            context.startActivity(intent)
+                        }
+                        else -> {
+                            Toast.makeText(context, bottomMenuItem.label, Toast.LENGTH_SHORT).show()
+                        }
                     }
                 },
-                icon={
-                    Icon(painter= bottomMenuItem.icon,
+                icon = {
+                    Icon(
+                        painter = bottomMenuItem.icon,
                         contentDescription = null,
                         modifier = Modifier
-                            .padding(top=8.dp)
-                            .size(20.dp))
+                            .padding(top = 8.dp)
+                            .size(20.dp)
+                    )
                 }
             )
         }
@@ -59,15 +70,17 @@ fun MyBottomBar() {
 }
 
 data class BottomMenuItem(
-    val label:String,val icon:Painter
+    val label: String,
+    val icon: Painter
 )
+
 @Composable
-fun prepareBottommenu():List<BottomMenuItem>{
-    val bottomMenuItemsList=arrayListOf<BottomMenuItem>()
-    bottomMenuItemsList.add(BottomMenuItem(label="Home",icon=painterResource(R.drawable.btn_1)))
-    bottomMenuItemsList.add(BottomMenuItem(label="Cart",icon=painterResource(R.drawable.btn_2)))
-    bottomMenuItemsList.add(BottomMenuItem(label="Favorite",icon=painterResource(R.drawable.btn_3)))
-    bottomMenuItemsList.add(BottomMenuItem(label="Order",icon=painterResource(R.drawable.btn_4)))
-    bottomMenuItemsList.add(BottomMenuItem(label="Profile",icon=painterResource(R.drawable.btn_5)))
+fun prepareBottommenu(): List<BottomMenuItem> {
+    val bottomMenuItemsList = arrayListOf<BottomMenuItem>()
+    bottomMenuItemsList.add(BottomMenuItem(label = "Home", icon = painterResource(R.drawable.btn_1)))
+    bottomMenuItemsList.add(BottomMenuItem(label = "Cart", icon = painterResource(R.drawable.btn_2)))
+    bottomMenuItemsList.add(BottomMenuItem(label = "Favorite", icon = painterResource(R.drawable.btn_3)))
+    bottomMenuItemsList.add(BottomMenuItem(label = "Order", icon = painterResource(R.drawable.btn_4)))
+    bottomMenuItemsList.add(BottomMenuItem(label = "Profile", icon = painterResource(R.drawable.btn_5)))
     return bottomMenuItemsList
 }

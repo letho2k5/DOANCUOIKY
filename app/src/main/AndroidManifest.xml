@@ -41,6 +41,21 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.DOANCUOIKY" />
+        <activity
+            android:name=".Activity.Auth.LoginActivity"
+            android:exported="true" />
+        <activity
+            android:name=".Activity.Auth.RegisterActivity"
+            android:exported="true" />
+
+        <!-- Trong AndroidManifest.xml -->
+        <activity
+            android:name=".Activity.Profile.ProfileActivity"
+            android:exported="true" />
+        <activity
+            android:name=".Activity.Profile.EditProfileActivity"
+            android:exported="true" />
+
     </application>
 
 </manifest>

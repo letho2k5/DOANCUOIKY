@@ -17,14 +17,17 @@ import com.example.doancuoiky.R
 
 @Composable
 @Preview
-fun GetStartedButton(onClick: () -> Unit = {}, modifier: Modifier = Modifier) {
+fun GetStartedButton(
+    onClick: () -> Unit = {},
+    onLoginClick: () -> Unit = {},
+    modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     ) {
         Button(
-            onClick = onClick, // <-- sử dụng callback truyền vào
+            onClick = onLoginClick, // <-- sử dụng callback truyền vào
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Transparent
             ),
@@ -36,7 +39,7 @@ fun GetStartedButton(onClick: () -> Unit = {}, modifier: Modifier = Modifier) {
                 .height(50.dp)
         ) {
             Text(
-                text = "Signup",
+                text = "Login",
                 fontSize = 16.sp,
                 color = Color.White
             )
