@@ -1,55 +1,68 @@
 package com.example.doancuoiky.Activity.Cart
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import coil.compose.rememberAsyncImagePainter
-import com.example.doancuoiky.Helper.ManagmentCart
 import com.example.doancuoiky.Domain.FoodModel
+import com.example.doancuoiky.Helper.ManagmentCart
 import com.example.doancuoiky.R
 import java.text.DecimalFormat
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.sp
 
 @Composable
 fun CartItem(
-    cartItems: ArrayList<FoodModel>,
     item: FoodModel,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
     managmentCart: ManagmentCart,
-    onItemChange: () -> Unit
+    onItemChange: () -> Unit,
+    onDeleteItem: (FoodModel) -> Unit  // Thay đổi để chuyển FoodModel vào khi xóa
 ) {
+    // State để kiểm tra xem hộp thoại có hiển thị không
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // State để lưu món hàng cần xóa
+    var itemToDelete by remember { mutableStateOf<FoodModel?>(null) }
+
     ConstraintLayout(
         modifier = Modifier
             .padding(vertical = 8.dp)
             .fillMaxWidth()
-            .border(1.dp, colorResource(R.color.grey),shape= RoundedCornerShape(10.dp))
+            .border(1.dp, colorResource(R.color.grey), shape = RoundedCornerShape(10.dp))
     ) {
-        val (pic, titleTxt, feeEachTime, totalEachItem, quantity) = createRefs()
+        val (checkboxRef, pic, titleTxt, feeEachTime, totalEachItem, quantity, deleteBtn) = createRefs()
         var numberInCart by remember { mutableStateOf(item.numberInCart) }
         val decimalFormat = DecimalFormat("#.00")
 
+        // Checkbox
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = { onCheckedChange(it) },
+            modifier = Modifier
+                .padding(8.dp)
+                .constrainAs(checkboxRef) {
+                    top.linkTo(parent.top)
+                    start.linkTo(parent.start)
+                }
+        )
+
+        // Image
         Image(
             painter = rememberAsyncImagePainter(item.ImagePath),
             contentDescription = null,
@@ -57,49 +70,72 @@ fun CartItem(
             modifier = Modifier
                 .width(135.dp)
                 .height(100.dp)
-                .background(
-                    colorResource(R.color.grey),
-                    shape = RoundedCornerShape(10.dp)
-                )
                 .clip(RoundedCornerShape(10.dp))
                 .constrainAs(pic) {
-                    start.linkTo(parent.start)
+                    start.linkTo(checkboxRef.end)
                     top.linkTo(parent.top)
                     bottom.linkTo(parent.bottom)
                 }
         )
-        Text(text = item.Title,
-            fontWeight = FontWeight.Bold,
+
+        // Title
+        Text(
+            text = item.Title,
             fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier
+                .padding(start = 8.dp, top = 8.dp)
                 .constrainAs(titleTxt) {
                     start.linkTo(pic.end)
                     top.linkTo(pic.top)
                 }
-                .padding(start = 8.dp, top = 8.dp)
         )
-        Text(text = "$${decimalFormat.format(item.Price)}",
+
+        // Price
+        Text(
+            text = "$${decimalFormat.format(item.Price)}",
             fontSize = 16.sp,
             color = colorResource(R.color.darkPurple),
             modifier = Modifier
+                .padding(start = 8.dp)
                 .constrainAs(feeEachTime) {
                     start.linkTo(titleTxt.start)
-                    top.linkTo(parent.top)
-                    bottom.linkTo(parent.bottom)
+                    top.linkTo(titleTxt.bottom)
                 }
-                .padding(start=8.dp)
         )
+
+        // Total Price per Item
         Text(
             text = "$${decimalFormat.format(numberInCart * item.Price)}",
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
+                .padding(8.dp)
                 .constrainAs(totalEachItem) {
                     end.linkTo(parent.end)
                     bottom.linkTo(pic.bottom)
                 }
-                .padding(8.dp)
         )
+
+        // Delete Button (Positioned below the Checkbox)
+        Icon(
+            imageVector = Icons.Default.Delete,
+            contentDescription = "Delete",
+            tint = Color.Red,
+            modifier = Modifier
+                .padding(8.dp)
+                .clickable {
+                    // Khi nhấn vào thùng rác, hiển thị hộp thoại xác nhận
+                    itemToDelete = item
+                    showDeleteDialog = true
+                }
+                .constrainAs(deleteBtn) {
+                    top.linkTo(checkboxRef.bottom)  // Position below the checkbox
+                    start.linkTo(parent.start)
+                }
+        )
+
+        // Quantity Box (Plus and Minus Buttons)
         ConstraintLayout(
             modifier = Modifier
                 .width(100.dp)
@@ -109,65 +145,85 @@ fun CartItem(
                     bottom.linkTo(parent.bottom)
                 }
         ) {
-            val (plusCartBtn, minusCartBtn, numberItemText) = createRefs()
-            Text(text = item.numberInCart.toString(),
-                color = colorResource(R.color.darkPurple),
+            val (plusBtn, minusBtn, quantityText) = createRefs()
+
+            Text(
+                text = numberInCart.toString(),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.constrainAs(numberItemText) {
-                    end.linkTo(parent.end)
-                    start.linkTo(parent.start)
-                    top.linkTo(parent.top)
-                    bottom.linkTo(parent.bottom)
+                modifier = Modifier.constrainAs(quantityText) {
+                    centerTo(parent)
                 }
             )
-            Box(modifier = Modifier
-                .padding(2.dp)
-                .size(28.dp)
-                .constrainAs(plusCartBtn) {
-                    end.linkTo(parent.end)
-                    top.linkTo(parent.top)
-                    bottom.linkTo(parent.bottom)
-                }
-                .clickable {
-                    managmentCart.plusItem(cartItems, cartItems.indexOf(item)) { onItemChange() }
-                    numberInCart++
-                    item.numberInCart = numberInCart
-                }
+
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clickable {
+                        managmentCart.plusItem(item) {
+                            numberInCart++
+                            onItemChange()
+                        }
+                    }
+                    .constrainAs(plusBtn) {
+                        end.linkTo(parent.end)
+                        centerVerticallyTo(parent)
+                    }
             ) {
                 Text(
                     text = "+",
-                    color = colorResource(R.color.orange),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Center),
-                    textAlign = TextAlign.Center
+                    color = colorResource(R.color.orange),
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
 
-            Box(modifier = Modifier
-                .padding(2.dp)
-                .size(28.dp)
-                .constrainAs(minusCartBtn) {
-                    start.linkTo(parent.start)
-                    top.linkTo(parent.top)
-                    bottom.linkTo(parent.bottom)
-                }
-                .clickable {
-                    managmentCart.minusItem(cartItems, cartItems.indexOf(item)) { onItemChange() }
-                    numberInCart--
-                    item.numberInCart = numberInCart
-                }
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clickable {
+                        managmentCart.minusItem(item) {
+                            numberInCart = maxOf(0, numberInCart - 1)
+                            onItemChange()
+                        }
+                    }
+                    .constrainAs(minusBtn) {
+                        start.linkTo(parent.start)
+                        centerVerticallyTo(parent)
+                    }
             ) {
                 Text(
                     text = "-",
-                    color = colorResource(R.color.orange),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Center),
-                    textAlign = TextAlign.Center
+                    color = colorResource(R.color.orange),
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
         }
+    }
+
+    // Hiển thị hộp thoại xác nhận khi muốn xóa
+    if (showDeleteDialog && itemToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Xác nhận xóa") },
+            text = { Text("Bạn có chắc muốn xóa món này khỏi giỏ hàng?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    // Xóa món khi nhấn "Có"
+                    itemToDelete?.let { onDeleteItem(it) }
+                    showDeleteDialog = false
+                }) {
+                    Text("Có")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Không")
+                }
+            }
+        )
     }
 }

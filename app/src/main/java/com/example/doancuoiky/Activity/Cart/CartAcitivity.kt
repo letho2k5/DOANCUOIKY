@@ -9,9 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.Text
-import androidx.compose.material.AlertDialog
-import androidx.compose.material.TextButton
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,6 +24,7 @@ import com.example.doancuoiky.Activity.Auth.LoginActivity
 import com.example.doancuoiky.Helper.ManagmentCart
 import com.example.doancuoiky.R
 import com.example.doancuoiky.Activity.BaseActivity
+import com.example.doancuoiky.Domain.FoodModel
 
 class CartActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,9 +49,13 @@ fun CartScreen(
     var showLoginPrompt by remember { mutableStateOf(!isLoggedIn) }
     var allowRender by remember { mutableStateOf(isLoggedIn) }
 
+    var cartItems by remember { mutableStateOf(listOf<FoodModel>()) }
+    var tax by remember { mutableStateOf(0.0) }
+    val selectedItems = remember { mutableStateMapOf<String, Boolean>() }
+
     if (showLoginPrompt) {
         AlertDialog(
-            onDismissRequest = { },
+            onDismissRequest = {},
             title = { Text("Thông báo") },
             text = { Text("Bạn cần đăng nhập để xem giỏ hàng.") },
             confirmButton = {
@@ -78,9 +81,14 @@ fun CartScreen(
 
     if (!allowRender) return
 
-    val cartItem = remember { mutableStateOf(managmentCart.getListCart()) }
-    val tax = remember { mutableStateOf(0.0) }
-    calculateCart(managmentCart, tax)
+    LaunchedEffect(Unit) {
+        managmentCart.getListCart {
+            cartItems = it
+            it.forEach { item -> selectedItems[item.Title] = true }
+            val selectedTotal = calculateSelectedTotal(it, selectedItems)
+            tax = calculateTax(selectedTotal)
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -113,7 +121,7 @@ fun CartScreen(
             }
         }
 
-        if (cartItem.value.isEmpty()) {
+        if (cartItems.isEmpty()) {
             item {
                 Text(
                     text = "Cart Is Empty",
@@ -124,14 +132,32 @@ fun CartScreen(
                 )
             }
         } else {
-            items(cartItem.value) { item ->
+            items(cartItems) { item ->
+                val isChecked = selectedItems[item.Title] ?: true
                 CartItem(
-                    cartItems = cartItem.value,
                     item = item,
+                    isChecked = isChecked,
+                    onCheckedChange = {
+                        selectedItems[item.Title] = it
+                        val selectedTotal = calculateSelectedTotal(cartItems, selectedItems)
+                        tax = calculateTax(selectedTotal)
+                    },
                     managmentCart = managmentCart,
                     onItemChange = {
-                        calculateCart(managmentCart, tax)
-                        cartItem.value = ArrayList(managmentCart.getListCart())
+                        managmentCart.getListCart {
+                            cartItems = it
+                            val selectedTotal = calculateSelectedTotal(it, selectedItems)
+                            tax = calculateTax(selectedTotal)
+                        }
+                    },
+                    onDeleteItem = {
+                        managmentCart.removeItem(item) {
+                            managmentCart.getListCart {
+                                cartItems = it
+                                val selectedTotal = calculateSelectedTotal(it, selectedItems)
+                                tax = calculateTax(selectedTotal)
+                            }
+                        }
                     }
                 )
             }
@@ -147,9 +173,10 @@ fun CartScreen(
             }
 
             item {
+                val selectedTotal = calculateSelectedTotal(cartItems, selectedItems)
                 CartSummary(
-                    itemTotal = managmentCart.getTotalFee(),
-                    tax = tax.value,
+                    itemTotal = selectedTotal,
+                    tax = tax,
                     delivery = 10.0
                 )
             }
@@ -171,7 +198,12 @@ fun CartScreen(
     }
 }
 
-fun calculateCart(managmentCart: ManagmentCart, tax: MutableState<Double>) {
+fun calculateSelectedTotal(cartItems: List<FoodModel>, selectedItems: Map<String, Boolean>): Double {
+    return cartItems.filter { selectedItems[it.Title] == true }
+        .sumOf { it.Price * it.numberInCart }
+}
+
+fun calculateTax(selectedTotal: Double): Double {
     val percentTax = 0.02
-    tax.value = Math.round((managmentCart.getTotalFee() * percentTax) * 100) / 100.0
+    return Math.round((selectedTotal * percentTax) * 100) / 100.0
 }
