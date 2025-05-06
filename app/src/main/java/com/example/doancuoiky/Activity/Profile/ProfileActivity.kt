@@ -106,7 +106,6 @@ fun ProfileScreen(onBackClick: () -> Unit) {
 
     if (!allowRender) return
 
-    // UI nếu đã đăng nhập
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -175,7 +174,6 @@ fun ProfileScreen(onBackClick: () -> Unit) {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Thêm các thông tin khác
                         ProfileInfoLine("Số điện thoại", userProfile?.phone)
                         ProfileInfoLine("Giới tính", userProfile?.gender)
                         ProfileInfoLine("Ngày sinh", userProfile?.birthDate)
@@ -185,9 +183,9 @@ fun ProfileScreen(onBackClick: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Chỉnh sửa thông tin
                 Button(
                     onClick = {
-                        // Chuyển đến màn hình chỉnh sửa thông tin
                         val intent = Intent(context, EditProfileActivity::class.java)
                         context.startActivity(intent)
                     },
@@ -200,25 +198,26 @@ fun ProfileScreen(onBackClick: () -> Unit) {
                     Text("Chỉnh sửa thông tin", fontWeight = FontWeight.Bold, color = Color.White)
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Lịch sử đơn hàng
+                ProfileOptionItem(
+                    iconRes = R.drawable.ic_history, // Thêm icon phù hợp
+                    title = "Lịch sử đơn hàng",
+                    onClick = {
+                        val intent = Intent(context, OrderHistoryActivity::class.java)
+                        context.startActivity(intent)
+                    }
+                )
+
+
+                // Đăng xuất
                 ProfileOptionItem(
                     iconRes = R.drawable.ic_logout,
                     title = "Đăng xuất",
                     onClick = { showLogoutDialog = true },
                     textColor = MaterialTheme.colorScheme.error
                 )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = onBackClick,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                ) {
-                    Text("Quay lại", fontWeight = FontWeight.Bold, color = Color.White)
-                }
             }
         }
 
@@ -252,6 +251,7 @@ fun ProfileScreen(onBackClick: () -> Unit) {
     }
 }
 
+
 @Composable
 fun ProfileInfoLine(label: String, value: String?) {
     Text(
@@ -269,41 +269,31 @@ fun ProfileOptionItem(
     iconRes: Int,
     title: String,
     onClick: () -> Unit,
-    textColor: Color = MaterialTheme.colorScheme.onSurface
+    textColor: Color = Color.White,
+    backgroundColor: Color = Color(0xFF64B5F6) // Màu xanh nhạt hơn chỉnh sửa thông tin
 ) {
-    Surface(
+    Button(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(12.dp)
+            .height(50.dp)
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = backgroundColor)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                tint = textColor,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
-                color = textColor,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                painter = painterResource(id = R.drawable.ic_arrow_forward),
-                contentDescription = null,
-                tint = textColor
-            )
-        }
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            tint = textColor,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = title,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = textColor
+        )
     }
 }
+

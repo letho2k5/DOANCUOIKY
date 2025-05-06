@@ -2,6 +2,7 @@ package com.example.doancuoiky.Activity.Cart
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
@@ -24,7 +25,9 @@ import com.example.doancuoiky.Activity.Auth.LoginActivity
 import com.example.doancuoiky.Helper.ManagmentCart
 import com.example.doancuoiky.R
 import com.example.doancuoiky.Activity.BaseActivity
+import com.example.doancuoiky.Activity.Order.Order
 import com.example.doancuoiky.Domain.FoodModel
+import com.google.firebase.database.FirebaseDatabase
 
 class CartActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -193,6 +196,51 @@ fun CartScreen(
 
             item {
                 DeliveryInfoBox()
+            }
+
+            item {
+                Button(
+                    onClick = {
+                        val userId = sharedPref.getString("userId", "") ?: return@Button
+                        val userOrderRef = FirebaseDatabase.getInstance().getReference("users")
+                            .child(userId)
+                            .child("orders") // ✅ Sửa tại đây: lưu vào đúng chỗ trong users/{userId}/orders
+
+                        val orderId = userOrderRef.push().key ?: return@Button
+                        val selectedItemsList = cartItems.filter { selectedItems[it.Title] == true }
+
+                        val order = Order(
+                            id = orderId,
+                            items = selectedItemsList,
+                            total = calculateSelectedTotal(cartItems, selectedItems),
+                            tax = tax,
+                            deliveryFee = 10.0,
+                            status = "To Pay",
+                            userId = userId
+                        )
+
+                        // ✅ Ghi đúng vào users/{userId}/orders/{orderId}
+                        userOrderRef.child(orderId).setValue(order).addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                Toast.makeText(context, "Đặt hàng thành công!", Toast.LENGTH_SHORT)
+                                    .show()
+                                onBackClick()
+                            } else {
+                                Toast.makeText(context, "Lỗi khi đặt hàng!", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = colorResource(R.color.darkPurple))
+                ) {
+                    Text(
+                        text = "Place Order",
+                        color = colorResource(R.color.white),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

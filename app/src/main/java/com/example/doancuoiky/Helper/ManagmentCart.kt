@@ -11,14 +11,23 @@ import com.google.firebase.database.*
 class ManagmentCart(val context: Context) {
 
     private val auth = FirebaseAuth.getInstance()
-    private val userId = auth.currentUser?.uid
-    private val databaseRef: DatabaseReference =
-        FirebaseDatabase.getInstance().getReference("users").child(userId ?: "").child("cart")
+    private val database = FirebaseDatabase.getInstance()
+
+    private fun getUserId(): String? {
+        return auth.currentUser?.uid
+    }
+
+    private fun getCartRef(): DatabaseReference? {
+        val userId = getUserId()
+        return if (userId != null)
+            database.getReference("users").child(userId).child("cart")
+        else
+            null
+    }
 
     fun insertItem(item: FoodModel) {
-        if (userId == null) return
-
-        databaseRef.child(item.Title).setValue(item)
+        val ref = getCartRef() ?: return
+        ref.child(item.Title).setValue(item)
             .addOnSuccessListener {
                 Toast.makeText(context, "Added to your Cart", Toast.LENGTH_SHORT).show()
             }
@@ -28,12 +37,13 @@ class ManagmentCart(val context: Context) {
     }
 
     fun getListCart(onComplete: (ArrayList<FoodModel>) -> Unit) {
-        if (userId == null) {
+        val ref = getCartRef()
+        if (ref == null) {
             onComplete(arrayListOf())
             return
         }
 
-        databaseRef.addListenerForSingleValueEvent(object : ValueEventListener {
+        ref.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val cartList = arrayListOf<FoodModel>()
                 for (itemSnapshot in snapshot.children) {
@@ -52,18 +62,20 @@ class ManagmentCart(val context: Context) {
     }
 
     fun minusItem(item: FoodModel, listener: ChangeNumberItemsListener) {
+        val ref = getCartRef() ?: return
         val newQuantity = item.numberInCart - 1
         if (newQuantity <= 0) {
-            databaseRef.child(item.Title).removeValue()
+            ref.child(item.Title).removeValue()
         } else {
-            databaseRef.child(item.Title).child("numberInCart").setValue(newQuantity)
+            ref.child(item.Title).child("numberInCart").setValue(newQuantity)
         }
         listener.onChanged()
     }
 
     fun plusItem(item: FoodModel, listener: ChangeNumberItemsListener) {
+        val ref = getCartRef() ?: return
         val newQuantity = item.numberInCart + 1
-        databaseRef.child(item.Title).child("numberInCart").setValue(newQuantity)
+        ref.child(item.Title).child("numberInCart").setValue(newQuantity)
         listener.onChanged()
     }
 
@@ -76,7 +88,8 @@ class ManagmentCart(val context: Context) {
     }
 
     fun removeItem(item: FoodModel, callback: () -> Unit) {
-        databaseRef.child(item.Title).removeValue()
+        val ref = getCartRef() ?: return
+        ref.child(item.Title).removeValue()
             .addOnSuccessListener {
                 Toast.makeText(context, "Item removed", Toast.LENGTH_SHORT).show()
                 callback()
@@ -86,3 +99,5 @@ class ManagmentCart(val context: Context) {
             }
     }
 }
+
+

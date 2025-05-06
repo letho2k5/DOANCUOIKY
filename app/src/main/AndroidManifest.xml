@@ -2,6 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Thêm quyền cho Internet và mạng -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+    <!-- Thêm quyền cho Firebase, Google Play Services -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -12,6 +20,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DOANCUOIKY"
         tools:targetApi="31">
+
+        <!-- Các Activity của ứng dụng -->
         <activity
             android:name=".Activity.Cart.CartActivity"
             android:exported="false" />
@@ -23,16 +33,12 @@
             android:exported="false" />
         <activity
             android:name=".Activity.BaseActivity"
-            android:exported="false" /> <!-- <activity -->
-        <!-- android:name=".Activity.Activity" -->
-        <!-- android:exported="false" -->
-        <!-- tools:ignore="MissingClass" /> -->
+            android:exported="false" />
         <activity
             android:name=".Activity.Splash.SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -47,13 +53,14 @@
         <activity
             android:name=".Activity.Auth.RegisterActivity"
             android:exported="true" />
-
-        <!-- Trong AndroidManifest.xml -->
         <activity
             android:name=".Activity.Profile.ProfileActivity"
             android:exported="true" />
         <activity
             android:name=".Activity.Profile.EditProfileActivity"
+            android:exported="true" />
+        <activity
+            android:name=".Activity.Order.OrderActivity"
             android:exported="true" />
 
     </application>

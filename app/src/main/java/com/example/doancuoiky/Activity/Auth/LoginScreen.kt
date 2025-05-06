@@ -1,5 +1,6 @@
 package com.example.doancuoiky.Activity.auth
 
+import android.content.Context
 import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.compose.animation.AnimatedVisibility
@@ -7,7 +8,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,13 +40,10 @@ import kotlinx.coroutines.launch
 fun LoginScreen() {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
-
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf<String?>(null) } // Thông báo lỗi hoặc thành công
-    val scope = rememberCoroutineScope()
+    var message by remember { mutableStateOf<String?>(null) }
 
-    // Ẩn message sau 3 giây
     LaunchedEffect(message) {
         if (message != null) {
             delay(3000)
@@ -53,14 +57,14 @@ fun LoginScreen() {
                 .fillMaxSize()
                 .padding(24.dp)
                 .padding(paddingValues),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            // Banner hiển thị thông báo ở trên cùng
             AnimatedVisibility(visible = message != null) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFFFFE082)) // màu vàng nhạt
+                        .background(Color(0xFFFFE082))
                         .padding(12.dp)
                 ) {
                     Text(
@@ -69,30 +73,47 @@ fun LoginScreen() {
                         fontWeight = FontWeight.Medium
                     )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Cine AI",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Text(
+                text = "Smart Ticketing Made Easy",
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             Image(
                 painter = painterResource(id = R.drawable.login),
-                contentDescription = "Food Banner",
+                contentDescription = "Logo",
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
+                    .size(120.dp)
+                    .background(Color.White, shape = CircleShape)
+                    .padding(8.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = "Đăng nhập",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 16.dp),
-                fontWeight = FontWeight.Bold
-            )
+            Text(text = "Login to your account", fontSize = 16.sp)
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Email") },
+                leadingIcon = {
+                    Icon(Icons.Default.Email, contentDescription = null)
+                },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
@@ -105,16 +126,36 @@ fun LoginScreen() {
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Mật khẩu") },
-                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Password") },
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = null)
+                },
+                trailingIcon = {
+                    Icon(Icons.Default.Visibility, contentDescription = null)
+                },
                 visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
                 )
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Text(
+                    text = "Forgot Password?",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 12.sp,
+                    modifier = Modifier.clickable { /* Xử lý quên mật khẩu */ }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = {
@@ -122,37 +163,69 @@ fun LoginScreen() {
                         auth.signInWithEmailAndPassword(email, password)
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
-                                    // Lưu thông tin người dùng vào SharedPreferences
-                                    val sharedPref = context.getSharedPreferences("UserPrefs", android.content.Context.MODE_PRIVATE)
-                                    with(sharedPref.edit()) {
-                                        putString("userName", email.split("@")[0]) // Lấy phần trước @ làm userName
-                                        putString("userEmail", email) // Lưu email
-                                        putBoolean("isLoggedIn", true) // Đánh dấu đã đăng nhập
-                                        apply()
+                                    val user = auth.currentUser
+                                    if (user != null) {
+                                        val sharedPref = context.getSharedPreferences(
+                                            "UserPrefs",
+                                            Context.MODE_PRIVATE
+                                        )
+                                        with(sharedPref.edit()) {
+                                            putString("userId", user.uid)
+                                            putString("userEmail", email)
+                                            putBoolean("isLoggedIn", true)
+                                            apply()
+                                        }
+                                        message = "Login successful"
+                                        context.startActivity(Intent(context, MainActivity::class.java))
+                                        (context as? ComponentActivity)?.finish()
+                                    } else {
+                                        message = "Cannot get user info"
                                     }
-                                    message = "Đăng nhập thành công"
-                                    // Điều hướng đến MainActivity
-                                    context.startActivity(Intent(context, MainActivity::class.java))
-                                    (context as? ComponentActivity)?.finish()
                                 } else {
-                                    message = "Lỗi: ${task.exception?.message}"
+                                    message = "Login error: ${task.exception?.message}"
                                 }
                             }
                     } else {
-                        message = "Vui lòng điền đầy đủ thông tin"
+                        message = "Please fill in all fields"
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Text("Đăng nhập", fontWeight = FontWeight.Bold)
+                Text("Login", fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            Text(text = "OR")
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                OutlinedButton(onClick = { /* Login with Google */ }) {
+                    Icon(painterResource(id = R.drawable.ic_google), contentDescription = "Google")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Google")
+                }
+
+                OutlinedButton(onClick = { /* Login with Facebook */ }) {
+                    Icon(painterResource(id = R.drawable.ic_facebook), contentDescription = "Facebook")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Facebook")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             Text(
-                text = "Chưa có tài khoản? Đăng ký",
+                text = "Don't have an account? Register",
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.primary,
+                color = Color(0xFFFF6F00),
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable {
                     context.startActivity(Intent(context, RegisterActivity::class.java))

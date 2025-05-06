@@ -73,4 +73,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation:1.7.6")
     implementation ("com.google.firebase:firebase-auth:21.0.5")
 
+
+    implementation ("androidx.compose.material:material-icons-extended:<version>")
+
 }
