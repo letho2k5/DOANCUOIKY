@@ -62,7 +62,9 @@
         <activity
             android:name=".Activity.Order.OrderActivity"
             android:exported="true" />
-
+        <activity
+            android:name=".Activity.Auth.ForgotPasswordActivity"
+            android:exported="true" />
     </application>
 
 </manifest>

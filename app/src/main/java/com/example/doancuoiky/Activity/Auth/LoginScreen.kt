@@ -2,6 +2,7 @@ package com.example.doancuoiky.Activity.auth
 
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,8 +28,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.doancuoiky.Activity.Auth.ForgotPasswordActivity
 import com.example.doancuoiky.Activity.Auth.RegisterActivity
 import com.example.doancuoiky.Activity.Dashboard.MainActivity
 import com.example.doancuoiky.R
@@ -123,6 +127,8 @@ fun LoginScreen() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            var passwordVisible by remember { mutableStateOf(false) }
+
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -131,9 +137,18 @@ fun LoginScreen() {
                     Icon(Icons.Default.Lock, contentDescription = null)
                 },
                 trailingIcon = {
-                    Icon(Icons.Default.Visibility, contentDescription = null)
+                    val visibilityIcon = if (passwordVisible)
+                        Icons.Default.VisibilityOff
+                    else
+                        Icons.Default.Visibility
+
+                    val description = if (passwordVisible) "Hide password" else "Show password"
+
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = visibilityIcon, contentDescription = description)
+                    }
                 },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
@@ -151,7 +166,9 @@ fun LoginScreen() {
                     text = "Forgot Password?",
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 12.sp,
-                    modifier = Modifier.clickable { /* Xử lý quên mật khẩu */ }
+                    modifier = Modifier.clickable {
+                        context.startActivity(Intent(context, ForgotPasswordActivity::class.java))
+                    }
                 )
             }
 
@@ -234,3 +251,24 @@ fun LoginScreen() {
         }
     }
 }
+
+
+
+
+
+fun sendResetPasswordEmail(context: Context, email: String) {
+    if (email.isEmpty()) {
+        Toast.makeText(context, "Vui lòng nhập email", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    FirebaseAuth.getInstance().sendPasswordResetEmail(email)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Toast.makeText(context, "Đã gửi email khôi phục. Vui lòng kiểm tra hộp thư!", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(context, "Lỗi: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+}
+

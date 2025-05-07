@@ -48,7 +48,7 @@ fun CartScreen(
 ) {
     val context = LocalContext.current
     val sharedPref = context.getSharedPreferences("UserPrefs", android.content.Context.MODE_PRIVATE)
-    val isLoggedIn = sharedPref.contains("userName")
+    val isLoggedIn = sharedPref.getBoolean("isLoggedIn", false)
     var showLoginPrompt by remember { mutableStateOf(!isLoggedIn) }
     var allowRender by remember { mutableStateOf(isLoggedIn) }
 
