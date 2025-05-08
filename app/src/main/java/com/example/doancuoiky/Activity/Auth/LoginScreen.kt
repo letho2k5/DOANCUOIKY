@@ -82,14 +82,14 @@ fun LoginScreen() {
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Cine AI",
+                text = "KEBAB NGON",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
 
             Text(
-                text = "Smart Ticketing Made Easy",
+                text = "If you hungry,...",
                 fontSize = 14.sp,
                 color = Color.Gray
             )
@@ -100,7 +100,7 @@ fun LoginScreen() {
                 painter = painterResource(id = R.drawable.login),
                 contentDescription = "Logo",
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(180.dp)
                     .background(Color.White, shape = CircleShape)
                     .padding(8.dp)
             )

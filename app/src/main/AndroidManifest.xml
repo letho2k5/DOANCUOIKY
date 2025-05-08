@@ -65,6 +65,9 @@
         <activity
             android:name=".Activity.Auth.ForgotPasswordActivity"
             android:exported="true" />
+        <activity
+            android:name=".Activity.Favourite.FavouriteActivity"
+            android:exported="true" />
     </application>
 
 </manifest>

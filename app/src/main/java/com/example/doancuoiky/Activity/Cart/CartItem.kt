@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Close // Thêm dòng import này
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -23,7 +24,6 @@ import com.example.doancuoiky.Domain.FoodModel
 import com.example.doancuoiky.Helper.ManagmentCart
 import com.example.doancuoiky.R
 import java.text.DecimalFormat
-import androidx.compose.ui.text.font.FontWeight
 
 @Composable
 fun CartItem(
@@ -32,21 +32,18 @@ fun CartItem(
     onCheckedChange: (Boolean) -> Unit,
     managmentCart: ManagmentCart,
     onItemChange: () -> Unit,
-    onDeleteItem: (FoodModel) -> Unit  // Thay đổi để chuyển FoodModel vào khi xóa
+    onDeleteItem: (FoodModel) -> Unit
 ) {
-    // State để kiểm tra xem hộp thoại có hiển thị không
     var showDeleteDialog by remember { mutableStateOf(false) }
-
-    // State để lưu món hàng cần xóa
     var itemToDelete by remember { mutableStateOf<FoodModel?>(null) }
 
     ConstraintLayout(
         modifier = Modifier
             .padding(vertical = 8.dp)
             .fillMaxWidth()
-            .border(1.dp, colorResource(R.color.grey), shape = RoundedCornerShape(10.dp))
+            .border(1.dp, colorResource(R.color.grey), RoundedCornerShape(10.dp))
     ) {
-        val (checkboxRef, pic, titleTxt, feeEachTime, totalEachItem, quantity, deleteBtn) = createRefs()
+        val (checkboxRef, pic, titleTxt, feeEachTime, quantity, deleteBtn) = createRefs()
         var numberInCart by remember { mutableStateOf(item.numberInCart) }
         val decimalFormat = DecimalFormat("#.00")
 
@@ -70,7 +67,7 @@ fun CartItem(
             modifier = Modifier
                 .width(135.dp)
                 .height(100.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .constrainAs(pic) {
                     start.linkTo(checkboxRef.end)
                     top.linkTo(parent.top)
@@ -91,51 +88,38 @@ fun CartItem(
                 }
         )
 
-        // Price
+        // Price - nằm dưới tên món ăn
         Text(
             text = "$${decimalFormat.format(item.Price)}",
-            fontSize = 16.sp,
-            color = colorResource(R.color.darkPurple),
+            fontSize = 15.sp,
+            color = Color.Red,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier
-                .padding(start = 8.dp)
+                .padding(start = 8.dp, top = 2.dp)
                 .constrainAs(feeEachTime) {
                     start.linkTo(titleTxt.start)
                     top.linkTo(titleTxt.bottom)
                 }
         )
 
-        // Total Price per Item
-        Text(
-            text = "$${decimalFormat.format(numberInCart * item.Price)}",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .padding(8.dp)
-                .constrainAs(totalEachItem) {
-                    end.linkTo(parent.end)
-                    bottom.linkTo(pic.bottom)
-                }
-        )
-
-        // Delete Button (Positioned below the Checkbox)
+        // Delete icon
         Icon(
-            imageVector = Icons.Default.Delete,
+            imageVector = Icons.Default.Close,
             contentDescription = "Delete",
             tint = Color.Red,
             modifier = Modifier
                 .padding(8.dp)
                 .clickable {
-                    // Khi nhấn vào thùng rác, hiển thị hộp thoại xác nhận
                     itemToDelete = item
                     showDeleteDialog = true
                 }
                 .constrainAs(deleteBtn) {
-                    top.linkTo(checkboxRef.bottom)  // Position below the checkbox
-                    start.linkTo(parent.start)
+                    top.linkTo(parent.top)
+                    end.linkTo(parent.end)
                 }
         )
 
-        // Quantity Box (Plus and Minus Buttons)
+        // Quantity control
         ConstraintLayout(
             modifier = Modifier
                 .width(100.dp)
@@ -204,7 +188,7 @@ fun CartItem(
         }
     }
 
-    // Hiển thị hộp thoại xác nhận khi muốn xóa
+    // Confirm delete dialog
     if (showDeleteDialog && itemToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -212,7 +196,6 @@ fun CartItem(
             text = { Text("Bạn có chắc muốn xóa món này khỏi giỏ hàng?") },
             confirmButton = {
                 TextButton(onClick = {
-                    // Xóa món khi nhấn "Có"
                     itemToDelete?.let { onDeleteItem(it) }
                     showDeleteDialog = false
                 }) {

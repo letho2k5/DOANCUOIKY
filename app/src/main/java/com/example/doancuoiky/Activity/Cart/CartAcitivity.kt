@@ -43,7 +43,7 @@ class CartActivity : BaseActivity() {
 
 @Composable
 fun CartScreen(
-    managmentCart: ManagmentCart = ManagmentCart(LocalContext.current),
+    managmentCart: ManagmentCart,
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -56,6 +56,7 @@ fun CartScreen(
     var tax by remember { mutableStateOf(0.0) }
     val selectedItems = remember { mutableStateMapOf<String, Boolean>() }
 
+    // ✅ Nếu chưa đăng nhập, hiển thị hộp thoại yêu cầu đăng nhập
     if (showLoginPrompt) {
         AlertDialog(
             onDismissRequest = {},
@@ -84,20 +85,16 @@ fun CartScreen(
 
     if (!allowRender) return
 
+    // ✅ Load dữ liệu giỏ hàng khi mở
     LaunchedEffect(Unit) {
         managmentCart.getListCart {
             cartItems = it
             it.forEach { item -> selectedItems[item.Title] = true }
-            val selectedTotal = calculateSelectedTotal(it, selectedItems)
-            tax = calculateTax(selectedTotal)
+            tax = calculateTax(calculateSelectedTotal(it, selectedItems))
         }
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         item {
             ConstraintLayout(modifier = Modifier.padding(top = 16.dp)) {
                 val (backBtn, cartTxt) = createRefs()
@@ -142,23 +139,20 @@ fun CartScreen(
                     isChecked = isChecked,
                     onCheckedChange = {
                         selectedItems[item.Title] = it
-                        val selectedTotal = calculateSelectedTotal(cartItems, selectedItems)
-                        tax = calculateTax(selectedTotal)
+                        tax = calculateTax(calculateSelectedTotal(cartItems, selectedItems))
                     },
                     managmentCart = managmentCart,
                     onItemChange = {
                         managmentCart.getListCart {
                             cartItems = it
-                            val selectedTotal = calculateSelectedTotal(it, selectedItems)
-                            tax = calculateTax(selectedTotal)
+                            tax = calculateTax(calculateSelectedTotal(it, selectedItems))
                         }
                     },
                     onDeleteItem = {
                         managmentCart.removeItem(item) {
                             managmentCart.getListCart {
                                 cartItems = it
-                                val selectedTotal = calculateSelectedTotal(it, selectedItems)
-                                tax = calculateTax(selectedTotal)
+                                tax = calculateTax(calculateSelectedTotal(it, selectedItems))
                             }
                         }
                     }
@@ -202,13 +196,20 @@ fun CartScreen(
                 Button(
                     onClick = {
                         val userId = sharedPref.getString("userId", "") ?: return@Button
-                        val userOrderRef = FirebaseDatabase.getInstance().getReference("users")
+                        val userOrderRef = FirebaseDatabase.getInstance()
+                            .getReference("users")
                             .child(userId)
-                            .child("orders") // ✅ Sửa tại đây: lưu vào đúng chỗ trong users/{userId}/orders
+                            .child("orders")
 
-                        val orderId = userOrderRef.push().key ?: return@Button
                         val selectedItemsList = cartItems.filter { selectedItems[it.Title] == true }
 
+                        // ✅ Kiểm tra nếu chưa chọn món nào
+                        if (selectedItemsList.isEmpty()) {
+                            Toast.makeText(context, "Bạn chưa chọn món nào để đặt hàng.", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        val orderId = userOrderRef.push().key ?: return@Button
                         val order = Order(
                             id = orderId,
                             items = selectedItemsList,
@@ -219,19 +220,18 @@ fun CartScreen(
                             userId = userId
                         )
 
-                        // ✅ Ghi đúng vào users/{userId}/orders/{orderId}
                         userOrderRef.child(orderId).setValue(order).addOnCompleteListener { task ->
                             if (task.isSuccessful) {
-                                Toast.makeText(context, "Đặt hàng thành công!", Toast.LENGTH_SHORT)
-                                    .show()
+                                Toast.makeText(context, "Đặt hàng thành công!", Toast.LENGTH_SHORT).show()
                                 onBackClick()
                             } else {
-                                Toast.makeText(context, "Lỗi khi đặt hàng!", Toast.LENGTH_SHORT)
-                                    .show()
+                                Toast.makeText(context, "Lỗi khi đặt hàng!", Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
                     colors = ButtonDefaults.buttonColors(backgroundColor = colorResource(R.color.darkPurple))
                 ) {
                     Text(

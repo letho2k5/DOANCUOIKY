@@ -32,6 +32,7 @@ import com.example.doancuoiky.R
 import com.example.doancuoiky.Activity.Cart.CartActivity
 import com.example.doancuoiky.Activity.Order.OrderActivity
 import com.example.doancuoiky.Activity.Profile.ProfileActivity
+import com.example.doancuoiky.Activity.Favourite.FavouriteActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
@@ -39,45 +40,47 @@ import com.google.firebase.database.*
 fun MyBottomBar() {
     val database = FirebaseDatabase.getInstance()
 
-    // State để lưu số lượng sản phẩm trong giỏ hàng và đơn hàng
+    // State to store cart, order, and favorite item counts
     var cartItemCount by remember { mutableStateOf(0) }
     var orderItemCount by remember { mutableStateOf(0) }
+    var favoriteItemCount by remember { mutableStateOf(0) }  // For favorite items count
 
-    // Lấy userId từ Firebase Authentication hoặc dùng mặc định
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "default_user_id"
     val cartRef = database.getReference("users/$userId/cart")
     val ordersRef = database.getReference("users/$userId/orders")
+    val favoriteRef = database.getReference("users/$userId/favourites")  // Reference for favorites
 
-    // Lấy context trong ngữ cảnh composable
     val context = LocalContext.current
 
-    // Lấy số lượng sản phẩm trong giỏ hàng từ Firebase Realtime Database
+    // Fetch data from Firebase
     LaunchedEffect(Unit) {
-        // Đăng ký sự kiện thay đổi số lượng giỏ hàng
         cartRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                Log.d("MyBottomBar", "Cart snapshot: $snapshot")
-                cartItemCount = snapshot.childrenCount.toInt() // Đếm số lượng item trong cart
-                Log.d("MyBottomBar", "Updated cartItemCount: $cartItemCount")
+                cartItemCount = snapshot.childrenCount.toInt()
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(context, "Failed to load cart data: ${error.message}", Toast.LENGTH_SHORT).show()
-                Log.e("MyBottomBar", "Cart listener cancelled: ${error.message}")
+                Toast.makeText(context, "Failed to load cart data", Toast.LENGTH_SHORT).show()
             }
         })
 
-        // Đăng ký sự kiện thay đổi số lượng đơn hàng
         ordersRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                Log.d("MyBottomBar", "Orders snapshot: $snapshot")
-                orderItemCount = snapshot.childrenCount.toInt() // Đếm số lượng đơn hàng
-                Log.d("MyBottomBar", "Updated orderItemCount: $orderItemCount")
+                orderItemCount = snapshot.childrenCount.toInt()
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(context, "Failed to load order data: ${error.message}", Toast.LENGTH_SHORT).show()
-                Log.e("MyBottomBar", "Orders listener cancelled: ${error.message}")
+                Toast.makeText(context, "Failed to load order data", Toast.LENGTH_SHORT).show()
+            }
+        })
+
+        favoriteRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                favoriteItemCount = snapshot.childrenCount.toInt()  // Update favorite item count
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Toast.makeText(context, "Failed to load favorite data", Toast.LENGTH_SHORT).show()
             }
         })
     }
@@ -95,22 +98,11 @@ fun MyBottomBar() {
                 onClick = {
                     selectedItem = bottomMenuItem.label
                     when (bottomMenuItem.label) {
-                        "Cart" -> {
-                            context.startActivity(Intent(context, CartActivity::class.java))
-                        }
-                        "Order" -> {
-                            context.startActivity(Intent(context, OrderActivity::class.java))
-                        }
-                        "Profile" -> {
-                            val intent = Intent(context, ProfileActivity::class.java).apply {
-                                putExtra("userName", "Nguyen Van A")
-                                putExtra("userEmail", "nguyenvana@example.com")
-                            }
-                            context.startActivity(intent)
-                        }
-                        else -> {
-                            Toast.makeText(context, bottomMenuItem.label, Toast.LENGTH_SHORT).show()
-                        }
+                        "Cart" -> context.startActivity(Intent(context, CartActivity::class.java))
+                        "Order" -> context.startActivity(Intent(context, OrderActivity::class.java))
+                        "Profile" -> context.startActivity(Intent(context, ProfileActivity::class.java))
+                        "Favorite" -> context.startActivity(Intent(context, FavouriteActivity::class.java))
+                        else -> Toast.makeText(context, bottomMenuItem.label, Toast.LENGTH_SHORT).show()
                     }
                 },
                 icon = {
@@ -122,11 +114,17 @@ fun MyBottomBar() {
                                 .padding(top = 8.dp)
                                 .size(20.dp)
                         )
+                        // Display Cart badge
                         if (bottomMenuItem.label == "Cart" && cartItemCount > 0) {
                             CartOrderBadge(count = cartItemCount, modifier = Modifier.align(Alignment.TopEnd))
                         }
+                        // Display Order badge
                         if (bottomMenuItem.label == "Order" && orderItemCount > 0) {
                             CartOrderBadge(count = orderItemCount, modifier = Modifier.align(Alignment.TopEnd))
+                        }
+                        // Display Favorite badge
+                        if (bottomMenuItem.label == "Favorite" && favoriteItemCount > 0) {
+                            CartOrderBadge(count = favoriteItemCount, modifier = Modifier.align(Alignment.TopEnd))
                         }
                     }
                 }
@@ -160,7 +158,7 @@ fun prepareBottommenu(): List<BottomMenuItem> {
     val bottomMenuItemsList = arrayListOf<BottomMenuItem>()
     bottomMenuItemsList.add(BottomMenuItem(label = "Home", icon = painterResource(R.drawable.btn_1)))
     bottomMenuItemsList.add(BottomMenuItem(label = "Cart", icon = painterResource(R.drawable.btn_2)))
-    bottomMenuItemsList.add(BottomMenuItem(label = "Favorite", icon = painterResource(R.drawable.btn_3)))
+    bottomMenuItemsList.add(BottomMenuItem(label = "Favorite", icon = painterResource(R.drawable.btn_3)))  // Added Favorite
     bottomMenuItemsList.add(BottomMenuItem(label = "Order", icon = painterResource(R.drawable.btn_4)))
     bottomMenuItemsList.add(BottomMenuItem(label = "Profile", icon = painterResource(R.drawable.btn_5)))
     return bottomMenuItemsList

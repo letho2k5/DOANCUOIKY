@@ -5,6 +5,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,12 +15,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.doancuoiky.R
 import com.example.doancuoiky.Activity.Auth.LoginActivity
 import com.example.doancuoiky.Domain.FoodModel
@@ -97,62 +100,127 @@ fun OrderScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Mua Sắm Của Tôi",
+                        text = "My Orders",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Xem Lịch Sử Mua Hàng",
+                        text = "History",
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable {
-                            val intent = Intent(context, OrderActivity::class.java)
-                            intent.putExtra("order_filter", "history")
-                            context.startActivity(intent)
-                        }
+                        modifier = Modifier.clickable(onClick = onHistoryClick)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    OrderItem(R.drawable.ic_to_pay, "Cần Thanh Toán") {
-                        val intent = Intent(context, OrderActivity::class.java)
-                        intent.putExtra("order_filter", "To Pay")
-                        context.startActivity(intent)
-                    }
-                    OrderItem(R.drawable.ic_to_ship, "Cần Vận Chuyển") {
-                        val intent = Intent(context, OrderActivity::class.java)
-                        intent.putExtra("order_filter", "To Ship")
-                        context.startActivity(intent)
-                    }
-                    OrderItem(R.drawable.ic_to_receive, "Cần Nhận Hàng") {
-                        val intent = Intent(context, OrderActivity::class.java)
-                        intent.putExtra("order_filter", "To Receive")
-                        context.startActivity(intent)
-                    }
-                }
+                if (initialFilter == "upcoming") {
+                    LazyColumn {
+                        items(orders) { order ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                elevation = CardDefaults.cardElevation(4.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val firstItem = order.items?.firstOrNull()
+                                        AsyncImage(
+                                            model = firstItem?.ImagePath ?: R.drawable.logo,
+                                            contentDescription = "Order Item",
+                                            modifier = Modifier
+                                                .size(200.dp) // Tăng kích thước ảnh để chiếm ~1/2 khung
+                                                .padding(4.dp)
+                                                .clip(RoundedCornerShape(30.dp)) // Bo tròn góc hơn
+                                                .border(2.dp, Color.Gray, RoundedCornerShape(30.dp)) // Viền cho ảnh
+                                        )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                } else {
-                    if (orders.isNotEmpty()) {
-                        OrderList(orders) { orderId ->
-                            val intent = Intent(context, OrderDetailActivity::class.java)
-                            intent.putExtra("order_id", orderId)
-                            context.startActivity(intent)
+                                        Text(
+                                            text = "${order.items?.size ?: 0} items • #${order.id}",
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(text = "Estimated Arrival: Now")
+                                    Text(text = "Status: ${order.status}")
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceEvenly
+                                    ) {
+                                        Button(
+                                            onClick = { /* Cancel action */ },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("Cancel")
+                                        }
+                                        Button(
+                                            onClick = { /* Track action */ },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5722)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("Track Order")
+                                        }
+                                    }
+                                }
+                            }
                         }
-                    } else {
-                        Text(
-                            text = "Không có đơn hàng.",
-                            fontSize = 16.sp,
-                            color = Color.Gray,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        )
+                    }
+                } else {
+                    LazyColumn {
+                        items(orders) { order ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                elevation = CardDefaults.cardElevation(4.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val firstItem = order.items?.firstOrNull()
+                                        AsyncImage(
+                                            model = firstItem?.ImagePath ?: R.drawable.logo,
+                                            contentDescription = "Order Item",
+                                            modifier = Modifier
+                                                .size(120.dp) // Tăng kích thước ảnh
+                                                .padding(4.dp)
+                                                .clip(RoundedCornerShape(24.dp)) // Bo tròn góc hơn
+                                                .border(2.dp, Color.Gray, RoundedCornerShape(24.dp)) // Viền cho ảnh
+                                        )
+                                        Text(
+                                            text = "${order.items?.size ?: 0} items • $${order.total}",
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceEvenly
+                                    ) {
+                                        // Xóa Rate button
+                                        Button(
+                                            onClick = { onItemClick(order.id) },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5722)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text(text = "${order.status}")
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -186,46 +254,4 @@ fun LoginDialog(onDismiss: () -> Unit, onLoginClick: () -> Unit, onCancelClick: 
             }
         }
     )
-}
-
-@Composable
-fun OrderItem(iconRes: Int, label: String, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp)
-    ) {
-        Image(
-            painter = painterResource(id = iconRes),
-            contentDescription = label,
-            modifier = Modifier.size(36.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = label, fontSize = 14.sp)
-    }
-}
-
-@Composable
-fun OrderList(orders: List<Order>, onClick: (String) -> Unit) {
-    LazyColumn(modifier = Modifier.fillMaxWidth()) {
-        items(orders) { order ->
-            OrderListItem(order, onClick)
-        }
-    }
-}
-
-@Composable
-fun OrderListItem(order: Order, onClick: (String) -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-            .clickable { onClick(order.id) }
-    ) {
-        Text(text = "Đơn hàng ID: ${order.id}", fontWeight = FontWeight.Bold)
-        Text(text = "Tổng: ${order.total} VND")
-        Text(text = "Trạng thái: ${order.status}")
-        Spacer(modifier = Modifier.height(8.dp))
-    }
 }

@@ -48,20 +48,6 @@ fun DeliveryInfoBox() {
             icon = painterResource(R.drawable.credit_card)
         )
     }
-    Button(
-        onClick = {},
-        shape= RoundedCornerShape(10.dp),
-        colors= ButtonDefaults.buttonColors(
-            containerColor = colorResource(R.color.orange)
-        ),
-        modifier = Modifier
-            .padding(vertical =32.dp)
-            .fillMaxWidth()
-            .height(50.dp)
-    ) {
-        Text(text="Place Order",fontSize=18.sp,
-            color=Color.White)
-    }
 
 }
 @Composable
