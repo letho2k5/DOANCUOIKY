@@ -34,10 +34,11 @@ import androidx.compose.ui.unit.sp
 import com.example.doancuoiky.Activity.Auth.ForgotPasswordActivity
 import com.example.doancuoiky.Activity.Auth.RegisterActivity
 import com.example.doancuoiky.Activity.Dashboard.MainActivity
+import com.example.doancuoiky.Activity.Admin.AdminActivity
 import com.example.doancuoiky.R
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -182,28 +183,47 @@ fun LoginScreen() {
                                 if (task.isSuccessful) {
                                     val user = auth.currentUser
                                     if (user != null) {
-                                        val sharedPref = context.getSharedPreferences(
-                                            "UserPrefs",
-                                            Context.MODE_PRIVATE
-                                        )
-                                        with(sharedPref.edit()) {
-                                            putString("userId", user.uid)
-                                            putString("userEmail", email)
-                                            putBoolean("isLoggedIn", true)
-                                            apply()
+                                        val uid = user.uid
+                                        val database = FirebaseDatabase.getInstance().reference
+                                        val userRef = database.child("users").child(uid)
+
+                                        userRef.get().addOnSuccessListener { snapshot ->
+                                            if (snapshot.exists()) {
+                                                val role = snapshot.child("role").getValue(String::class.java)
+
+                                                val sharedPref = context.getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+                                                with(sharedPref.edit()) {
+                                                    putString("userId", uid)
+                                                    putString("userEmail", email)
+                                                    putBoolean("isLoggedIn", true)
+                                                    apply()
+                                                }
+
+                                                message = "Login successful"
+
+                                                if (role == "admin") {
+                                                    context.startActivity(Intent(context, AdminActivity::class.java))
+                                                } else {
+                                                    context.startActivity(Intent(context, MainActivity::class.java))
+                                                }
+
+                                                (context as? ComponentActivity)?.finish()
+                                            } else {
+                                                message = "Tài khoản không hợp lệ, vui lòng đăng ký tài khoản"
+                                                auth.signOut()
+                                            }
+                                        }.addOnFailureListener {
+                                            message = "Lỗi khi kiểm tra tài khoản"
                                         }
-                                        message = "Login successful"
-                                        context.startActivity(Intent(context, MainActivity::class.java))
-                                        (context as? ComponentActivity)?.finish()
                                     } else {
-                                        message = "Cannot get user info"
+                                        message = "Không thể lấy thông tin người dùng"
                                     }
                                 } else {
-                                    message = "Login error: ${task.exception?.message}"
+                                    message = "Lỗi đăng nhập: ${task.exception?.message}"
                                 }
                             }
                     } else {
-                        message = "Please fill in all fields"
+                        message = "Vui lòng điền đầy đủ thông tin"
                     }
                 },
                 modifier = Modifier
@@ -224,13 +244,13 @@ fun LoginScreen() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                OutlinedButton(onClick = { /* Login with Google */ }) {
+                OutlinedButton(onClick = { /* Google Login */ }) {
                     Icon(painterResource(id = R.drawable.ic_google), contentDescription = "Google")
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Google")
                 }
 
-                OutlinedButton(onClick = { /* Login with Facebook */ }) {
+                OutlinedButton(onClick = { /* Facebook Login */ }) {
                     Icon(painterResource(id = R.drawable.ic_facebook), contentDescription = "Facebook")
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Facebook")
@@ -256,6 +276,8 @@ fun LoginScreen() {
 
 
 
+
+
 fun sendResetPasswordEmail(context: Context, email: String) {
     if (email.isEmpty()) {
         Toast.makeText(context, "Vui lòng nhập email", Toast.LENGTH_SHORT).show()
@@ -271,4 +293,3 @@ fun sendResetPasswordEmail(context: Context, email: String) {
             }
         }
 }
-

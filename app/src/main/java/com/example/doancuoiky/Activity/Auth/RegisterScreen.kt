@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -63,7 +62,7 @@ fun RegisterScreen() {
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
         )
-        datePicker.datePicker.maxDate = System.currentTimeMillis() // Giới hạn ngày tối đa là hiện tại
+        datePicker.datePicker.maxDate = System.currentTimeMillis()
         datePicker.show()
     }
 
@@ -104,6 +103,7 @@ fun RegisterScreen() {
             label = { Text("Họ và tên") },
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -113,6 +113,7 @@ fun RegisterScreen() {
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
+
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -122,6 +123,7 @@ fun RegisterScreen() {
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
         )
+
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -130,6 +132,7 @@ fun RegisterScreen() {
             label = { Text("Địa chỉ") },
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -152,6 +155,7 @@ fun RegisterScreen() {
                     showDatePicker(context) { selectedDate -> birthDate = selectedDate }
                 }
         )
+
         Spacer(modifier = Modifier.height(12.dp))
 
         ExposedDropdownMenuBox(
@@ -191,6 +195,7 @@ fun RegisterScreen() {
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -216,18 +221,22 @@ fun RegisterScreen() {
                     Toast.makeText(context, "Vui lòng nhập đầy đủ thông tin", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
+
                 if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
                     Toast.makeText(context, "Email không hợp lệ", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
+
                 if (password != confirmPassword) {
                     Toast.makeText(context, "Mật khẩu không khớp", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
+
                 if (password.length < 6) {
                     Toast.makeText(context, "Mật khẩu phải có ít nhất 6 ký tự", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
+
                 if (phone.length < 10) {
                     Toast.makeText(context, "Số điện thoại phải có ít nhất 10 chữ số", Toast.LENGTH_SHORT).show()
                     return@Button
@@ -252,7 +261,6 @@ fun RegisterScreen() {
         )
     }
 
-    // Dialog đồng ý chia sẻ dữ liệu
     if (showConsentDialog) {
         AlertDialog(
             onDismissRequest = { showConsentDialog = false },
@@ -267,41 +275,43 @@ fun RegisterScreen() {
                 TextButton(onClick = {
                     showConsentDialog = false
                     coroutineScope.launch {
-                        auth.createUserWithEmailAndPassword(email, password)
+                        auth.fetchSignInMethodsForEmail(email)
                             .addOnSuccessListener { result ->
-                                val uid = result.user?.uid ?: return@addOnSuccessListener
-                                val user = UserProfile(
-                                    uid = uid,
-                                    fullName = fullName,
-                                    email = email,
-                                    phone = phone,
-                                    address = address,
-                                    birthDate = birthDate,
-                                    gender = gender
-                                )
-                                database.child("users").child(uid)
-                                    .setValue(user)
-                                    .addOnSuccessListener {
-                                        Toast.makeText(context, "Đăng ký thành công", Toast.LENGTH_SHORT).show()
-                                        context.startActivity(Intent(context, LoginActivity::class.java).apply {
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                        })
-                                    }
-                                    .addOnFailureListener { e ->
-                                        Toast.makeText(context, "Lưu thông tin thất bại: ${e.message}", Toast.LENGTH_LONG).show()
-                                    }
+                                val signInMethods = result.signInMethods
+                                if (signInMethods != null && signInMethods.isNotEmpty()) {
+                                    Toast.makeText(context, "Email đã được sử dụng. Vui lòng chọn email khác.", Toast.LENGTH_LONG).show()
+                                } else {
+                                    auth.createUserWithEmailAndPassword(email, password)
+                                        .addOnSuccessListener { result ->
+                                            val uid = result.user?.uid ?: return@addOnSuccessListener
+                                            val user = UserProfile(
+                                                uid = uid,
+                                                fullName = fullName,
+                                                email = email,
+                                                phone = phone,
+                                                address = address,
+                                                birthDate = birthDate,
+                                                gender = gender
+                                            )
+                                            database.child("users").child(uid)
+                                                .setValue(user)
+                                                .addOnSuccessListener {
+                                                    Toast.makeText(context, "Đăng ký thành công", Toast.LENGTH_SHORT).show()
+                                                    context.startActivity(Intent(context, LoginActivity::class.java).apply {
+                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                                    })
+                                                }
+                                                .addOnFailureListener { e ->
+                                                    Toast.makeText(context, "Lưu thông tin thất bại: ${e.message}", Toast.LENGTH_LONG).show()
+                                                }
+                                        }
+                                        .addOnFailureListener { e ->
+                                            Toast.makeText(context, "Đăng ký thất bại: ${e.message}", Toast.LENGTH_LONG).show()
+                                        }
+                                }
                             }
                             .addOnFailureListener { e ->
-                                when {
-                                    e.message?.contains("email address is already in use") == true ->
-                                        Toast.makeText(context, "Email đã được sử dụng. Vui lòng chọn email khác.", Toast.LENGTH_LONG).show()
-                                    e.message?.contains("network error") == true ->
-                                        Toast.makeText(context, "Không có kết nối mạng. Vui lòng thử lại.", Toast.LENGTH_LONG).show()
-                                    e.message?.contains("password is invalid") == true ->
-                                        Toast.makeText(context, "Mật khẩu phải có ít nhất 6 ký tự.", Toast.LENGTH_LONG).show()
-                                    else ->
-                                        Toast.makeText(context, "Đăng ký thất bại: ${e.message}", Toast.LENGTH_LONG).show()
-                                }
+                                Toast.makeText(context, "Không thể kiểm tra email: ${e.message}", Toast.LENGTH_LONG).show()
                             }
                     }
                 }) {

@@ -216,7 +216,7 @@ fun CartScreen(
                             total = calculateSelectedTotal(cartItems, selectedItems),
                             tax = tax,
                             deliveryFee = 10.0,
-                            status = "To Pay",
+                            status = "Wait Confirmed",
                             userId = userId
                         )
 

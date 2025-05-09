@@ -68,6 +68,15 @@
         <activity
             android:name=".Activity.Favourite.FavouriteActivity"
             android:exported="true" />
+        <activity
+            android:name=".Activity.Admin.AdminActivity"
+            android:exported="true" />
+        <activity
+            android:name=".Activity.Admin.User.UserActivity"
+            android:exported="true" />
+        <activity
+            android:name=".Activity.Admin.Order.OrderAdActivity"
+            android:exported="true" />
     </application>
 
 </manifest>

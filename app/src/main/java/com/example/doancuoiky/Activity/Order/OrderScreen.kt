@@ -3,7 +3,6 @@ package com.example.doancuoiky.Activity.Order
 import android.content.Intent
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,15 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.doancuoiky.R
 import com.example.doancuoiky.Activity.Auth.LoginActivity
-import com.example.doancuoiky.Domain.FoodModel
-import com.example.doancuoiky.Activity.Order.Order
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
@@ -46,16 +42,19 @@ fun OrderScreen(
     var isLoading by remember { mutableStateOf(true) }
 
     if (user != null) {
-        LaunchedEffect(user.uid, initialFilter) {
+        LaunchedEffect(user.uid) {
             val ordersRef = database.getReference("users").child(user.uid).child("orders")
             ordersRef.addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val fetchedOrders = mutableListOf<Order>()
+                    Log.d("OrderDebug", "initialFilter = '$initialFilter'")
+
                     for (orderSnapshot in snapshot.children) {
                         val order = orderSnapshot.getValue(Order::class.java)
-                        if (order != null && order.status == initialFilter) {
+                        if (order != null) {
                             order.id = orderSnapshot.key ?: ""
-                            fetchedOrders.add(order)
+                            Log.d("OrderDebug", "Found order with status = '${order.status}' and id = '${order.id}'")
+                            fetchedOrders.add(order) // Add all orders, ignoring filter for now
                         }
                     }
                     orders = fetchedOrders
@@ -113,109 +112,94 @@ fun OrderScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (initialFilter == "upcoming") {
-                    LazyColumn {
-                        items(orders) { order ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                elevation = CardDefaults.cardElevation(4.dp)
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        val firstItem = order.items?.firstOrNull()
-                                        AsyncImage(
-                                            model = firstItem?.ImagePath ?: R.drawable.logo,
-                                            contentDescription = "Order Item",
-                                            modifier = Modifier
-                                                .size(200.dp) // Tăng kích thước ảnh để chiếm ~1/2 khung
-                                                .padding(4.dp)
-                                                .clip(RoundedCornerShape(30.dp)) // Bo tròn góc hơn
-                                                .border(2.dp, Color.Gray, RoundedCornerShape(30.dp)) // Viền cho ảnh
-                                        )
-
-                                        Text(
-                                            text = "${order.items?.size ?: 0} items • #${order.id}",
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(text = "Estimated Arrival: Now")
-                                    Text(text = "Status: ${order.status}")
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceEvenly
-                                    ) {
-                                        Button(
-                                            onClick = { /* Cancel action */ },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Text("Cancel")
-                                        }
-                                        Button(
-                                            onClick = { /* Track action */ },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5722)),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Text("Track Order")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                if (isLoading) {
+                    CircularProgressIndicator()
                 } else {
-                    LazyColumn {
-                        items(orders) { order ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                elevation = CardDefaults.cardElevation(4.dp)
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        val firstItem = order.items?.firstOrNull()
-                                        AsyncImage(
-                                            model = firstItem?.ImagePath ?: R.drawable.logo,
-                                            contentDescription = "Order Item",
-                                            modifier = Modifier
-                                                .size(120.dp) // Tăng kích thước ảnh
-                                                .padding(4.dp)
-                                                .clip(RoundedCornerShape(24.dp)) // Bo tròn góc hơn
-                                                .border(2.dp, Color.Gray, RoundedCornerShape(24.dp)) // Viền cho ảnh
-                                        )
-                                        Text(
-                                            text = "${order.items?.size ?: 0} items • $${order.total}",
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceEvenly
-                                    ) {
-                                        // Xóa Rate button
-                                        Button(
-                                            onClick = { onItemClick(order.id) },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5722)),
-                                            shape = RoundedCornerShape(8.dp)
+                    if (orders.isEmpty()) {
+                        Text(text = "No orders found.")
+                    } else {
+                        LazyColumn {
+                            items(orders) { order ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    elevation = CardDefaults.cardElevation(4.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(text = "${order.status}")
+                                            val firstItem = order.items?.firstOrNull()
+                                            AsyncImage(
+                                                model = firstItem?.ImagePath ?: R.drawable.logo,
+                                                contentDescription = "Order Item",
+                                                modifier = Modifier
+                                                    .size(200.dp)
+                                                    .padding(4.dp)
+                                                    .clip(RoundedCornerShape(30.dp))
+                                                    .border(2.dp, Color.Gray, RoundedCornerShape(30.dp))
+                                            )
+                                            Text(
+                                                text = "${order.items?.size ?: 0} items • #${order.id}",
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(text = "Estimated Arrival: Now")
+                                        Text(text = "Status: ${order.status}")
+                                        Spacer(modifier = Modifier.height(16.dp))
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceEvenly
+                                        ) {
+                                            Button(
+                                                onClick = {
+                                                    val userId = user?.uid ?: return@Button
+                                                    val orderRef = database.getReference("users")
+                                                        .child(userId)
+                                                        .child("orders")
+                                                        .child(order.id)
+
+                                                    when (order.status) {
+                                                        "Wait Confirmed" -> {
+                                                            orderRef.child("status").setValue("Shipping")
+                                                                .addOnSuccessListener {
+                                                                    Toast.makeText(context, "Trạng thái cập nhật: Shipping", Toast.LENGTH_SHORT).show()
+                                                                }
+                                                        }
+                                                        "Shipping" -> {
+                                                            orderRef.child("status").setValue("Received")
+                                                                .addOnSuccessListener {
+                                                                    Toast.makeText(context, "Trạng thái cập nhật: Received", Toast.LENGTH_SHORT).show()
+                                                                }
+                                                        }
+                                                        "Received" -> {
+                                                            val historyRef = database.getReference("users")
+                                                                .child(userId)
+                                                                .child("histories")
+                                                                .child(order.id)
+                                                            historyRef.setValue(order).addOnSuccessListener {
+                                                                orderRef.removeValue()
+                                                                Toast.makeText(context, "Đơn hàng đã chuyển vào lịch sử", Toast.LENGTH_SHORT).show()
+                                                            }.addOnFailureListener {
+                                                                Toast.makeText(context, "Lỗi khi chuyển vào lịch sử", Toast.LENGTH_SHORT).show()
+                                                            }
+                                                        }
+                                                        else -> {
+                                                            Toast.makeText(context, "Trạng thái không hợp lệ", Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    }
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5722)),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text(text = order.status ?: "No Status")
+                                            }
                                         }
                                     }
                                 }
@@ -227,7 +211,6 @@ fun OrderScreen(
         }
     }
 }
-
 
 @Composable
 fun LoginDialog(onDismiss: () -> Unit, onLoginClick: () -> Unit, onCancelClick: () -> Unit) {

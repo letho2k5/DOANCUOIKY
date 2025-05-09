@@ -8,6 +8,8 @@ data class Order(
     var total: Double = 0.0,
     var tax: Double = 0.0,
     var deliveryFee: Double = 0.0,
-    var status: String = "To Pay",
-    var userId: String = ""
+    var status: String = "Wait Confirmed",
+    var userId: String = "",
+    var userName: String? = null // để lưu tên người đặt
+
 )
