@@ -1,4 +1,4 @@
-package com.example.doancuoiky.Activity.Profile
+package com.example.doancuoiky.Activity.Admin.Order
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,20 +12,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.doancuoiky.ui.theme.DOANCUOIKYTheme
 
-class OrderHistoryActivity : ComponentActivity() {
+class OrderAdHistoryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             DOANCUOIKYTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier.fillMaxSize().padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text("Lịch sử đơn hàng", fontSize = 24.sp)
-                    }
-                }
+                OrderAdHistoryScreen()
             }
         }
     }

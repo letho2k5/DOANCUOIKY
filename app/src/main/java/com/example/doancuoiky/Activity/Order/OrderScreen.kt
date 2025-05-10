@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.doancuoiky.R
 import com.example.doancuoiky.Activity.Auth.LoginActivity
+import com.example.doancuoiky.Activity.Profile.EditProfileActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
@@ -53,8 +54,7 @@ fun OrderScreen(
                         val order = orderSnapshot.getValue(Order::class.java)
                         if (order != null) {
                             order.id = orderSnapshot.key ?: ""
-                            Log.d("OrderDebug", "Found order with status = '${order.status}' and id = '${order.id}'")
-                            fetchedOrders.add(order) // Add all orders, ignoring filter for now
+                            fetchedOrders.add(order)
                         }
                     }
                     orders = fetchedOrders
@@ -106,7 +106,10 @@ fun OrderScreen(
                     Text(
                         text = "History",
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable(onClick = onHistoryClick)
+                        modifier = Modifier.clickable( onClick = {
+                            val intent = Intent(context, OrderHistoryActivity::class.java)
+                            context.startActivity(intent)
+                        })
                     )
                 }
 
@@ -157,45 +160,42 @@ fun OrderScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceEvenly
                                         ) {
+                                            val buttonColor = when (order.status) {
+                                                "Shipping" -> Color(0xFFFFC107) // Vàng
+                                                "Received" -> Color(0xFFF44336) // Đỏ
+                                                else -> Color.Gray
+                                            }
+
                                             Button(
                                                 onClick = {
-                                                    val userId = user?.uid ?: return@Button
-                                                    val orderRef = database.getReference("users")
-                                                        .child(userId)
-                                                        .child("orders")
-                                                        .child(order.id)
+                                                    if (order.status == "Received") {
+                                                        val userId = user?.uid ?: return@Button
+                                                        val orderRef = database.getReference("users")
+                                                            .child(userId)
+                                                            .child("orders")
+                                                            .child(order.id)
+                                                        val historyRef = database.getReference("users")
+                                                            .child(userId)
+                                                            .child("histories")
+                                                            .child(order.id)
 
-                                                    when (order.status) {
-                                                        "Wait Confirmed" -> {
-                                                            orderRef.child("status").setValue("Shipping")
-                                                                .addOnSuccessListener {
-                                                                    Toast.makeText(context, "Trạng thái cập nhật: Shipping", Toast.LENGTH_SHORT).show()
-                                                                }
+                                                        historyRef.setValue(order).addOnSuccessListener {
+                                                            orderRef.removeValue()
+                                                            // Cập nhật danh sách trong UI
+                                                            orders = orders.filter { it.id != order.id }
+                                                            Toast.makeText(context, "Đơn hàng đã chuyển vào lịch sử", Toast.LENGTH_SHORT).show()
+                                                        }.addOnFailureListener {
+                                                            Toast.makeText(context, "Lỗi khi chuyển vào lịch sử", Toast.LENGTH_SHORT).show()
                                                         }
-                                                        "Shipping" -> {
-                                                            orderRef.child("status").setValue("Received")
-                                                                .addOnSuccessListener {
-                                                                    Toast.makeText(context, "Trạng thái cập nhật: Received", Toast.LENGTH_SHORT).show()
-                                                                }
-                                                        }
-                                                        "Received" -> {
-                                                            val historyRef = database.getReference("users")
-                                                                .child(userId)
-                                                                .child("histories")
-                                                                .child(order.id)
-                                                            historyRef.setValue(order).addOnSuccessListener {
-                                                                orderRef.removeValue()
-                                                                Toast.makeText(context, "Đơn hàng đã chuyển vào lịch sử", Toast.LENGTH_SHORT).show()
-                                                            }.addOnFailureListener {
-                                                                Toast.makeText(context, "Lỗi khi chuyển vào lịch sử", Toast.LENGTH_SHORT).show()
-                                                            }
-                                                        }
-                                                        else -> {
-                                                            Toast.makeText(context, "Trạng thái không hợp lệ", Toast.LENGTH_SHORT).show()
-                                                        }
+                                                    } else {
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Chỉ có thể chuyển vào lịch sử khi trạng thái là 'Received'",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
                                                     }
                                                 },
-                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5722)),
+                                                colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
                                                 shape = RoundedCornerShape(8.dp)
                                             ) {
                                                 Text(text = order.status ?: "No Status")

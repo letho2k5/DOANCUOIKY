@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.androidx.media3.common.ktx)
+    implementation(libs.firebase.storage.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -77,5 +78,9 @@ dependencies {
 
     implementation ("androidx.compose.material:material-icons-extended:<version>")
     implementation ("androidx.compose.foundation:foundation:1.4.0") // to access `clip`
+
+    implementation ("com.google.firebase:firebase-storage-ktx")
+    implementation ("androidx.activity:activity-compose:1.7.2") // để sử dụng rememberLauncherForActivityResult
+
 
 }

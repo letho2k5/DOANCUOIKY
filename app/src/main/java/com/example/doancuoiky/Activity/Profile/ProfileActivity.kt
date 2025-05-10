@@ -200,15 +200,6 @@ fun ProfileScreen(onBackClick: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Lịch sử đơn hàng
-                ProfileOptionItem(
-                    iconRes = R.drawable.ic_history, // Thêm icon phù hợp
-                    title = "Lịch sử đơn hàng",
-                    onClick = {
-                        val intent = Intent(context, OrderHistoryActivity::class.java)
-                        context.startActivity(intent)
-                    }
-                )
 
 
                 // Đăng xuất

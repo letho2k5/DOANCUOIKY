@@ -13,7 +13,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
+import com.example.doancuoiky.Activity.Admin.Food.AdminCategoryActivity
 import com.example.doancuoiky.Activity.Admin.Order.OrderAdActivity
+import com.example.doancuoiky.Activity.Admin.Order.OrderAdHistoryActivity
 
 
 @Composable
@@ -27,7 +29,10 @@ fun AdminScreen() {
             style = MaterialTheme.typography.headlineSmall
         )
         // Button để quản lý thực đơn
-        Button(onClick = { /* Chuyển hướng đến màn hình quản lý thực đơn */ }) {
+        Button(onClick = {
+            val intent = Intent(context, AdminCategoryActivity::class.java)
+            context.startActivity(intent)
+        }) {
             Text("Quản lý thực đơn")
         }
         // Button để quản lý người dùng
