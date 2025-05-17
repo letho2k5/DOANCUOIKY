@@ -1,18 +1,28 @@
 package com.example.doancuoiky.Activity.DetailEachFood
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Button
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Slider
 import androidx.compose.material.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.doancuoiky.Domain.ReviewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -20,6 +30,9 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import android.widget.Toast
+import androidx.compose.ui.text.style.TextOverflow
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun ReviewSection(foodId: Int, modifier: Modifier = Modifier) {
@@ -117,54 +130,136 @@ fun ReviewItem(
     userNames: Map<String, String>,
     currentUser: com.google.firebase.auth.FirebaseUser?
 ) {
-    Row(
+    val currentTime = Calendar.getInstance().apply {
+        timeInMillis = System.currentTimeMillis()
+        set(Calendar.HOUR_OF_DAY, 17) // 05:14 PM
+        set(Calendar.MINUTE, 14)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val timeDiffMillis = currentTime - review.timestamp
+    val timeDiffHours = timeDiffMillis / (1000 * 60 * 60)
+    val timeDiffDays = timeDiffMillis / (1000 * 60 * 60 * 24)
+    val elapsedTime = when {
+        timeDiffDays > 0 -> "${timeDiffDays} ngày trước"
+        timeDiffHours > 0 -> "${timeDiffHours} giờ trước"
+        else -> "vừa xong"
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(
-                start = 16.dp + (level * 16).dp,
+                start = (level * 16).dp,
                 top = 8.dp,
                 end = 16.dp,
                 bottom = 8.dp
-            ),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            )
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "${"↳ ".repeat(level)}$displayName - ${if (review.parentReviewId == null) "${review.rating} ★" else ""}",
-                style = MaterialTheme.typography.bodyMedium
+        Row(
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Avatar
+            Image(
+                painter = painterResource(id = android.R.drawable.ic_menu_myplaces), // Placeholder avatar
+                contentDescription = "Avatar",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
             )
-            Text(
-                text = review.comment,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-        // Disable Reply button if the review belongs to the current user
-        if (review.uid != currentUser?.uid) {
-            TextButton(onClick = { setReplyingTo(review.reviewId ?: "") }) {
-                Text("Reply")
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // User name
+                    Text(
+                        text = displayName,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    // Timestamp
+                    Text(
+                        text = elapsedTime,
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+
+                // Rating (for top-level reviews only)
+                if (review.parentReviewId == null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        repeat(review.rating.toInt()) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Star",
+                                tint = Color.Yellow,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${review.rating}",
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+
+                // Comment
+                Text(
+                    text = review.comment,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+
+                // Reply button (hidden for current user's reviews)
+                if (review.uid != currentUser?.uid) {
+                    TextButton(
+                        onClick = { setReplyingTo(review.reviewId ?: "") },
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text(
+                            text = "Trả lời",
+                            fontSize = 12.sp,
+                            color = Color.Blue
+                        )
+                    }
+                }
             }
         }
-    }
 
-    // Display nested replies
-    val replies = reviews.filter { it.parentReviewId == review.reviewId }
-    replies.forEach { reply ->
-        val replyDisplayName = if (reply.uid == currentUser?.uid) {
-            "Bạn"
-        } else {
-            userNames[reply.uid] ?: reply.userName
+        // Display nested replies
+        val replies = reviews.filter { it.parentReviewId == review.reviewId }
+        replies.forEach { reply ->
+            val replyDisplayName = if (reply.uid == currentUser?.uid) {
+                "Bạn"
+            } else {
+                userNames[reply.uid] ?: reply.userName
+            }
+            ReviewItem(
+                review = reply,
+                displayName = replyDisplayName,
+                setReplyingTo = setReplyingTo,
+                level = level + 1,
+                reviews = reviews,
+                userNames = userNames,
+                currentUser = currentUser
+            )
         }
-        ReviewItem(
-            review = reply,
-            displayName = replyDisplayName,
-            setReplyingTo = setReplyingTo,
-            level = level + 1,
-            reviews = reviews,
-            userNames = userNames,
-            currentUser = currentUser
-        )
     }
 }
 
@@ -236,7 +331,8 @@ fun ReviewInputSection(
                             comment = comment,
                             isPharmacist = false,
                             parentReviewId = replyingTo,
-                            uid = currentUser
+                            uid = currentUser,
+                            timestamp = System.currentTimeMillis()
                         )
                         submitReview(foodId, newReview) { reviewId ->
                             newReview.reviewId = reviewId
