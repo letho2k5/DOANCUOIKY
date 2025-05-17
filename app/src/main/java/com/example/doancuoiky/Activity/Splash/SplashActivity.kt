@@ -23,6 +23,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import com.example.doancuoiky.Activity.Auth.LoginActivity
+import com.example.doancuoiky.Activity.Auth.RegisterActivity
 import com.example.doancuoiky.Activity.BaseActivity
 import com.example.doancuoiky.R
 import com.example.doancuoiky.Activity.Dashboard.MainActivity
@@ -35,7 +36,7 @@ class SplashActivity : BaseActivity() {
         setContent {
             SplashScreen(
                 onGetStartedClick = {
-                    startActivity(Intent(this, MainActivity::class.java))
+                    startActivity(Intent(this, RegisterActivity::class.java))
                 },
                 onLoginClick = {
                     startActivity(Intent(this, LoginActivity::class.java))

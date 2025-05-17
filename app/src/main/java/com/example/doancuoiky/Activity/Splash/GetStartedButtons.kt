@@ -56,7 +56,7 @@ fun GetStartedButton(
                 .height(50.dp)
         ) {
             Text(
-                text = "Get Started",
+                text = "Register",
                 fontSize = 16.sp,
                 color = Color.White
             )

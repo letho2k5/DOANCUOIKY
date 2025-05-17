@@ -82,5 +82,6 @@ dependencies {
     implementation ("com.google.firebase:firebase-storage-ktx")
     implementation ("androidx.activity:activity-compose:1.7.2") // để sử dụng rememberLauncherForActivityResult
 
+    implementation ("com.cloudinary:cloudinary-android:2.2.0")
 
 }

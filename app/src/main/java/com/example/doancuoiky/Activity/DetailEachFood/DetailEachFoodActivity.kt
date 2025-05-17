@@ -21,7 +21,6 @@ import com.example.doancuoiky.Helper.ManagmentCart
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
-
 class DetailEachFoodActivity : BaseActivity() {
     private lateinit var item: FoodModel
     private lateinit var managmentCart: ManagmentCart
@@ -44,6 +43,7 @@ class DetailEachFoodActivity : BaseActivity() {
         }
     }
 }
+
 @Composable
 private fun DetailScreen(
     item: FoodModel,
@@ -73,19 +73,20 @@ private fun DetailScreen(
                 onBackClick = onBackClick,
                 onIncrement = {
                     numberInCart++
-                    item.numberInCart=numberInCart
+                    item.numberInCart = numberInCart
                 },
                 onDecrement = {
-                    if (numberInCart>1){
+                    if (numberInCart > 1) {
                         numberInCart--
-                        item.numberInCart=numberInCart
+                        item.numberInCart = numberInCart
                     }
                 }
             )
-            DescriptionSection(item.Description)
+            DescriptionSection(description = item.Description, foodId = item.Id.toString())
         }
-        FooterSection(onAddToCartClick,
-            totalPrice = (item.Price*numberInCart),
+        FooterSection(
+            onAddToCartClick,
+            totalPrice = (item.Price * numberInCart),
             Modifier.constrainAs(footer) {
                 bottom.linkTo(parent.bottom)
                 end.linkTo(parent.end)

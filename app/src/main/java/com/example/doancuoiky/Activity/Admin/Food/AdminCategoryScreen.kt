@@ -7,7 +7,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,15 +25,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.cloudinary.android.MediaManager
+import com.cloudinary.android.callback.ErrorInfo
+import com.cloudinary.android.callback.UploadCallback
 import com.google.firebase.database.*
-import com.google.firebase.storage.FirebaseStorage
-
+import android.content.Intent
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.ActivityCompat
+import com.example.doancuoiky.Activity.ItemsList.ItemsListActivity
 
 @Composable
 fun AdminCategoryScreen() {
     val database = FirebaseDatabase.getInstance().getReference("Category")
     val context = LocalContext.current
-    val storage = FirebaseStorage.getInstance().reference.child("CategoryImages")
 
     var categories by remember { mutableStateOf<List<Pair<String, Category>>>(emptyList()) }
     var editingCategory by remember { mutableStateOf<Pair<String, Category>?>(null) }
@@ -42,8 +46,19 @@ fun AdminCategoryScreen() {
     var showAddDialog by remember { mutableStateOf(false) }
     var newCategoryName by remember { mutableStateOf("") }
     var newImageUri by remember { mutableStateOf<Uri?>(null) }
+    var showPermissionRationale by remember { mutableStateOf(false) }
 
-    // Image picker launcher (declared first)
+    // Initialize Cloudinary
+    LaunchedEffect(Unit) {
+        val config = mapOf(
+            "cloud_name" to "djrlah4ry",
+            "api_key" to "847946367387831",
+            "api_secret" to "W25CO72-QmqlG1Nz1JBsLv7achU"
+        )
+        MediaManager.init(context, config)
+    }
+
+    // Image picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -54,13 +69,24 @@ fun AdminCategoryScreen() {
     }
 
     // Permission launcher for accessing storage
+    val permissionToRequest = if (android.os.Build.VERSION.SDK_INT >= 33) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
             imagePickerLauncher.launch("image/*")
         } else {
-            Toast.makeText(context, "Cần quyền truy cập bộ nhớ", Toast.LENGTH_SHORT).show()
+            val activity = context as? androidx.activity.ComponentActivity
+            if (activity != null && ActivityCompat.shouldShowRequestPermissionRationale(activity, permissionToRequest)) {
+                showPermissionRationale = true
+            } else {
+                Toast.makeText(context, "Quyền truy cập bộ nhớ bị từ chối. Vui lòng cấp quyền trong cài đặt.", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -96,6 +122,13 @@ fun AdminCategoryScreen() {
                     },
                     onDelete = {
                         showDeleteConfirm = key to category
+                    },
+                    onItemClick = {
+                        val intent = Intent(context, ItemsListActivity::class.java).apply {
+                            putExtra("id", category.Id.toString())
+                            putExtra("title", category.Name)
+                        }
+                        context.startActivity(intent)
                     }
                 )
             }
@@ -197,7 +230,7 @@ fun AdminCategoryScreen() {
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(onClick = {
-                        permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                        permissionLauncher.launch(permissionToRequest)
                     }) {
                         Text("Chọn ảnh")
                     }
@@ -229,22 +262,32 @@ fun AdminCategoryScreen() {
                         }
 
                         if (newImageUri != null) {
-                            val imageRef = storage.child("${System.currentTimeMillis()}.jpg")
-                            imageRef.putFile(newImageUri!!)
-                                .addOnSuccessListener {
-                                    imageRef.downloadUrl.addOnSuccessListener { url ->
-                                        createCategory(url.toString())
-                                    }.addOnFailureListener { e ->
-                                        Toast.makeText(context, "Lỗi lấy URL ảnh: ${e.message}", Toast.LENGTH_LONG).show()
+                            // Upload to Cloudinary
+                            val requestId = MediaManager.get().upload(newImageUri)
+                                .option("folder", "CategoryImages")
+                                .option("public_id", "${System.currentTimeMillis()}")
+                                .callback(object : UploadCallback {
+                                    override fun onStart(requestId: String) {
+                                        Toast.makeText(context, "Đang tải ảnh lên...", Toast.LENGTH_SHORT).show()
                                     }
-                                }
-                                .addOnFailureListener { e ->
-                                    Toast.makeText(context, "Lỗi tải ảnh: ${e.message}", Toast.LENGTH_LONG).show()
-                                }
-                        } else {
-                            createCategory("") // Nếu không có ảnh, truyền chuỗi rỗng hoặc URL mặc định
-                        }
 
+                                    override fun onProgress(requestId: String, bytes: Long, totalBytes: Long) {}
+
+                                    override fun onSuccess(requestId: String, resultData: Map<*, *>) {
+                                        val imageUrl = resultData["secure_url"] as String
+                                        createCategory(imageUrl)
+                                    }
+
+                                    override fun onError(requestId: String, error: ErrorInfo) {
+                                        Toast.makeText(context, "Lỗi tải ảnh: ${error.description}", Toast.LENGTH_LONG).show()
+                                    }
+
+                                    override fun onReschedule(requestId: String, error: ErrorInfo) {}
+                                })
+                                .dispatch()
+                        } else {
+                            createCategory("")
+                        }
                     } else {
                         Toast.makeText(context, "Vui lòng nhập tên danh mục", Toast.LENGTH_SHORT).show()
                     }
@@ -263,19 +306,43 @@ fun AdminCategoryScreen() {
             }
         )
     }
+
+    // Permission Rationale Dialog
+    if (showPermissionRationale) {
+        AlertDialog(
+            onDismissRequest = { showPermissionRationale = false },
+            title = { Text("Yêu cầu quyền truy cập") },
+            text = { Text("Ứng dụng cần quyền truy cập bộ nhớ để chọn ảnh. Vui lòng cấp quyền để tiếp tục.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermissionRationale = false
+                    permissionLauncher.launch(permissionToRequest)
+                }) {
+                    Text("Cấp quyền")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionRationale = false }) {
+                    Text("Huỷ")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 fun AdminCategoryCard(
     category: Category,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onItemClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .padding(8.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(Color(0xFFFEEEDC))
+            .clickable(onClick = onItemClick)
             .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
