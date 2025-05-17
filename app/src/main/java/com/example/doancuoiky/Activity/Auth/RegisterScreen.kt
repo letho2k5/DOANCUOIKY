@@ -291,7 +291,8 @@ fun RegisterScreen() {
                                                 phone = phone,
                                                 address = address,
                                                 birthDate = birthDate,
-                                                gender = gender
+                                                gender = gender,
+                                                balance = 1000000.0 // Set default balance to 1,000,000
                                             )
                                             database.child("users").child(uid)
                                                 .setValue(user)

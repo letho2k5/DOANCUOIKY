@@ -4,7 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -28,7 +31,6 @@ import com.example.doancuoiky.Activity.BaseActivity
 import com.example.doancuoiky.R
 import com.example.doancuoiky.Activity.Dashboard.MainActivity
 
-
 class SplashActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +42,9 @@ class SplashActivity : BaseActivity() {
                 },
                 onLoginClick = {
                     startActivity(Intent(this, LoginActivity::class.java))
+                },
+                onHomeClick = {
+                    startActivity(Intent(this, MainActivity::class.java))
                 }
             )
         }
@@ -48,36 +53,56 @@ class SplashActivity : BaseActivity() {
 
 @Composable
 fun SplashScreen(
-    onGetStartedClick:()->Unit,
-    onLoginClick: () -> Unit) {
+    onGetStartedClick: () -> Unit,
+    onLoginClick: () -> Unit,
+    onHomeClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(color = colorResource(R.color.darkBrown))
     ) {
-        ConstraintLayout(modifier = Modifier.padding(top = 48.dp)) {
-            val (backgroundImg, logoImg) = createRefs()
+        ConstraintLayout(modifier = Modifier.fillMaxWidth()) {
+            val (homeButton, backgroundImg, logoImg) = createRefs()
+
+            // House Button in Top-Right Corner, above the image
+            Image(
+                painter = painterResource(id = R.drawable.home), // Assuming R.drawable.home exists
+                contentDescription = "Home",
+                modifier = Modifier
+                    .constrainAs(homeButton) {
+                        top.linkTo(parent.top, margin = 16.dp) // Position at the top of the screen
+                        end.linkTo(parent.end, margin = 16.dp)
+                    }
+                    .size(40.dp)
+                    .background(Color.White, shape = RoundedCornerShape(50.dp))
+                    .border(1.dp, Color.White, shape = RoundedCornerShape(50.dp))
+                    .clickable(onClick = onHomeClick)
+            )
+
+            // Background Image
             Image(
                 painter = painterResource(id = R.drawable.intro_pic),
                 contentDescription = null,
                 modifier = Modifier
                     .constrainAs(backgroundImg) {
-                        top.linkTo(parent.top)
+                        top.linkTo(homeButton.bottom) // Place image below the home button
                         start.linkTo(parent.start)
                     }
                     .fillMaxWidth()
             )
+
+            // Logo Image
             Image(
                 painter = painterResource(id = R.drawable.pizza),
                 contentDescription = null,
-                modifier = Modifier.run {
-                    constrainAs(logoImg) {
+                modifier = Modifier
+                    .constrainAs(logoImg) {
                         top.linkTo(backgroundImg.top)
                         bottom.linkTo(backgroundImg.bottom)
                         start.linkTo(parent.start)
                         end.linkTo(parent.end)
-                    }
-                },
+                    },
                 contentScale = ContentScale.Fit
             )
         }
@@ -106,7 +131,8 @@ fun SplashScreen(
                 .padding(16.dp)
         )
 
-        GetStartedButton(onClick = onGetStartedClick,
+        GetStartedButton(
+            onClick = onGetStartedClick,
             onLoginClick = onLoginClick,
             modifier = Modifier
                 .padding(top = 16.dp)
@@ -119,5 +145,7 @@ fun SplashScreen(
 fun PreviewSplashScreen() {
     SplashScreen(
         onGetStartedClick = {},
-        onLoginClick = {})
+        onLoginClick = {},
+        onHomeClick = {}
+    )
 }

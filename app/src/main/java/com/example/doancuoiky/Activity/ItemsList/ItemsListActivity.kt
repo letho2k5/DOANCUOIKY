@@ -1,7 +1,6 @@
 package com.example.doancuoiky.Activity.ItemsList
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -10,8 +9,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +38,7 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import android.util.Log
 
 class ItemsListActivity : BaseActivity() {
     private val viewModel = MainViewModel()
@@ -45,36 +47,15 @@ class ItemsListActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        id = intent.getStringExtra("id")?.toString() ?: ""
+        id = intent.getStringExtra("id") ?: ""
         title = intent.getStringExtra("title") ?: ""
-        Log.d("ItemsListActivity", "Received id: $id, title: $title")
 
         setContent {
             ItemListScreen(
                 title = title,
                 onBackClick = { finish() },
                 viewModel = viewModel,
-                id = id,
-                onAddProduct = {
-                    viewModel.addProduct(
-                        FoodModel(
-                            BestFood = false,
-                            CategoryId = id,
-                            Description = "New product description",
-                            Id = 0, // Will be set by addProduct
-                            ImagePath = "https://example.com/default.jpg",
-                            LocationId = 1,
-                            Price = 10.0,
-                            PriceId = 1,
-                            TimeId = 1,
-                            Title = "New Product",
-                            Calorie = 200,
-                            numberInCart = 0,
-                            Star = 4.0,
-                            TimeValue = 15
-                        )
-                    )
-                }
+                id = id
             )
         }
     }
@@ -85,12 +66,24 @@ private fun ItemListScreen(
     title: String,
     onBackClick: () -> Unit,
     viewModel: MainViewModel,
-    id: String,
-    onAddProduct: () -> Unit
+    id: String
 ) {
-    val items by viewModel.loadFiltered(id).observeAsState(emptyList())
+    // Tạo LiveData một lần và quan sát nó
+    val filteredLiveData = remember(id) { viewModel.loadFiltered(id) }
+    val items by filteredLiveData.observeAsState(emptyList())
+
     var isLoading by remember { mutableStateOf(true) }
     var userRole by remember { mutableStateOf<String?>(null) }
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    // State for new product input fields
+    val newTitle = remember { mutableStateOf("") }
+    val newPrice = remember { mutableStateOf("") }
+    val newDescription = remember { mutableStateOf("") }
+    val newCalorie = remember { mutableStateOf("") }
+    val newTimeValue = remember { mutableStateOf("") }
+    val newStar = remember { mutableStateOf("") }
+    val newImagePath = remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
@@ -109,17 +102,13 @@ private fun ItemListScreen(
                 })
         } else {
             userRole = ""
+            Log.d("ItemListScreen", "No user logged in")
         }
     }
 
-    LaunchedEffect(id) {
-        isLoading = true
-        viewModel.loadFiltered(id)
-    }
-
     LaunchedEffect(items) {
-        Log.d("ItemListScreen", "Items loaded: $items")
-        isLoading = false
+        Log.d("ItemListScreen", "Items loaded: ${items.size} items")
+        isLoading = false // Đặt loading = false khi có dữ liệu hoặc không có dữ liệu
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -154,10 +143,7 @@ private fun ItemListScreen(
 
             if (userRole == "admin") {
                 Button(
-                    onClick = {
-                        onAddProduct()
-                        viewModel.loadFiltered(id) // Refresh list after adding
-                    },
+                    onClick = { showAddDialog = true },
                     modifier = Modifier
                         .constrainAs(addBtn) {
                             top.linkTo(parent.top)
@@ -169,22 +155,135 @@ private fun ItemListScreen(
                 }
             }
         }
-        if (isLoading && userRole == null) {
+
+        // Add Product Dialog
+        if (showAddDialog && userRole == "admin") {
+            AlertDialog(
+                onDismissRequest = { showAddDialog = false },
+                title = { Text("Add New Product") },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = newTitle.value,
+                            onValueChange = { newTitle.value = it },
+                            label = { Text("Title") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                        OutlinedTextField(
+                            value = newPrice.value,
+                            onValueChange = { newPrice.value = it },
+                            label = { Text("Price") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                        OutlinedTextField(
+                            value = newDescription.value,
+                            onValueChange = { newDescription.value = it },
+                            label = { Text("Description") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                        OutlinedTextField(
+                            value = newCalorie.value,
+                            onValueChange = { newCalorie.value = it },
+                            label = { Text("Calorie") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                        OutlinedTextField(
+                            value = newTimeValue.value,
+                            onValueChange = { newTimeValue.value = it },
+                            label = { Text("Time Value (min)") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                        OutlinedTextField(
+                            value = newStar.value,
+                            onValueChange = { newStar.value = it },
+                            label = { Text("Star Rating") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                        OutlinedTextField(
+                            value = newImagePath.value,
+                            onValueChange = { newImagePath.value = it },
+                            label = { Text("Image URL") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val newProduct = FoodModel(
+                                BestFood = false,
+                                CategoryId = id,
+                                Description = newDescription.value,
+                                Id = 0, // Will be set by addProduct
+                                ImagePath = newImagePath.value.ifEmpty { "https://example.com/default.jpg" },
+                                LocationId = 1,
+                                Price = newPrice.value.toDoubleOrNull() ?: 10.0,
+                                PriceId = 1,
+                                TimeId = 1,
+                                Title = newTitle.value,
+                                Calorie = newCalorie.value.toIntOrNull() ?: 200,
+                                numberInCart = 0,
+                                Star = newStar.value.toDoubleOrNull() ?: 4.0,
+                                TimeValue = newTimeValue.value.toIntOrNull() ?: 15
+                            )
+
+                            Log.d("ItemListScreen", "Adding product: $newProduct")
+                            viewModel.addProduct(newProduct)
+
+                            showAddDialog = false
+                            // Reset input fields
+                            newTitle.value = ""
+                            newPrice.value = ""
+                            newDescription.value = ""
+                            newCalorie.value = ""
+                            newTimeValue.value = ""
+                            newStar.value = ""
+                            newImagePath.value = ""
+                        }
+                    ) {
+                        Text("Add")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { showAddDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
             }
-        } else if (items.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No products found in this category")
-            }
         } else {
-            ItemsList(items = items, userRole = userRole ?: "", viewModel = viewModel)
+            if (items.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No items found in this category")
+                }
+            } else {
+                ItemsList(items = items, userRole = userRole ?: "", viewModel = viewModel)
+            }
         }
     }
 }

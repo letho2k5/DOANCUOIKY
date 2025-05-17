@@ -20,14 +20,15 @@ import com.example.doancuoiky.R
 fun GetStartedButton(
     onClick: () -> Unit = {},
     onLoginClick: () -> Unit = {},
-    modifier: Modifier = Modifier) {
+    modifier: Modifier = Modifier
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     ) {
         Button(
-            onClick = onLoginClick, // <-- sử dụng callback truyền vào
+            onClick = onLoginClick,
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Transparent
             ),
@@ -46,7 +47,7 @@ fun GetStartedButton(
         }
 
         Button(
-            onClick = {onClick()}, // <-- sử dụng callback truyền vào
+            onClick = { onClick() },
             colors = ButtonDefaults.buttonColors(
                 containerColor = colorResource(R.color.orange)
             ),

@@ -159,18 +159,17 @@ fun Items(item: FoodModel, index: Int, userRole: String, viewModel: MainViewMode
             confirmButton = {
                 Button(
                     onClick = {
+                        Log.d("ItemsList", "Before update - CategoryId: ${item.CategoryId}")
                         val updatedFood = item.copy(
                             Title = title.value,
                             Price = price.value.toDoubleOrNull() ?: item.Price,
                             Description = description.value,
                             Calorie = calorie.value.toIntOrNull() ?: item.Calorie,
                             TimeValue = timeValue.value.toIntOrNull() ?: item.TimeValue,
-                            Star = star.value.toDoubleOrNull() ?: item.Star,
-                            CategoryId = item.CategoryId // Preserve CategoryId
+                            Star = star.value.toDoubleOrNull() ?: item.Star
                         )
-                        Log.d("ItemsList", "Updating food: $updatedFood")
+                        Log.d("ItemsList", "Updating product: $updatedFood")
                         viewModel.updateProduct(updatedFood)
-                        viewModel.loadFiltered(item.CategoryId) // Refresh list
                         showEditDialog.value = false
                     }
                 ) {
@@ -194,8 +193,8 @@ fun Items(item: FoodModel, index: Int, userRole: String, viewModel: MainViewMode
             confirmButton = {
                 Button(
                     onClick = {
+                        Log.d("ItemsList", "Deleting product: ${item.Id}")
                         viewModel.deleteProduct(item.Id)
-                        viewModel.loadFiltered(item.CategoryId) // Refresh list
                         showDeleteDialog.value = false
                     }
                 ) {

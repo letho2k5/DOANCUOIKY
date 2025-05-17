@@ -26,6 +26,7 @@ import com.example.doancuoiky.Helper.ManagmentCart
 import com.example.doancuoiky.R
 import com.example.doancuoiky.Activity.BaseActivity
 import com.example.doancuoiky.Activity.Order.Order
+import com.example.doancuoiky.Activity.Cart.BankPaymentInfo
 import com.example.doancuoiky.Domain.FoodModel
 import com.google.firebase.database.FirebaseDatabase
 
@@ -49,12 +50,17 @@ fun CartScreen(
     val context = LocalContext.current
     val sharedPref = context.getSharedPreferences("UserPrefs", android.content.Context.MODE_PRIVATE)
     val isLoggedIn = sharedPref.getBoolean("isLoggedIn", false)
+    val userId = sharedPref.getString("userId", "") ?: ""
     var showLoginPrompt by remember { mutableStateOf(!isLoggedIn) }
     var allowRender by remember { mutableStateOf(isLoggedIn) }
 
     var cartItems by remember { mutableStateOf(listOf<FoodModel>()) }
     var tax by remember { mutableStateOf(0.0) }
+    var selectedTotal by remember { mutableStateOf(0.0) }
     val selectedItems = remember { mutableStateMapOf<String, Boolean>() }
+    var address by remember { mutableStateOf("NY-downtown-no97") }
+    var paymentMethod by remember { mutableStateOf("Cash on Delivery") }
+    var bankPaymentInfo by remember { mutableStateOf<BankPaymentInfo?>(null) }
 
     // ✅ Nếu chưa đăng nhập, hiển thị hộp thoại yêu cầu đăng nhập
     if (showLoginPrompt) {
@@ -91,6 +97,7 @@ fun CartScreen(
             cartItems = it
             it.forEach { item -> selectedItems[item.Title] = true }
             tax = calculateTax(calculateSelectedTotal(it, selectedItems))
+            selectedTotal = calculateSelectedTotal(it, selectedItems)
         }
     }
 
@@ -140,12 +147,14 @@ fun CartScreen(
                     onCheckedChange = {
                         selectedItems[item.Title] = it
                         tax = calculateTax(calculateSelectedTotal(cartItems, selectedItems))
+                        selectedTotal = calculateSelectedTotal(cartItems, selectedItems)
                     },
                     managmentCart = managmentCart,
                     onItemChange = {
                         managmentCart.getListCart {
                             cartItems = it
                             tax = calculateTax(calculateSelectedTotal(it, selectedItems))
+                            selectedTotal = calculateSelectedTotal(it, selectedItems)
                         }
                     },
                     onDeleteItem = {
@@ -153,6 +162,7 @@ fun CartScreen(
                             managmentCart.getListCart {
                                 cartItems = it
                                 tax = calculateTax(calculateSelectedTotal(it, selectedItems))
+                                selectedTotal = calculateSelectedTotal(it, selectedItems)
                             }
                         }
                     }
@@ -170,7 +180,6 @@ fun CartScreen(
             }
 
             item {
-                val selectedTotal = calculateSelectedTotal(cartItems, selectedItems)
                 CartSummary(
                     itemTotal = selectedTotal,
                     tax = tax,
@@ -189,57 +198,121 @@ fun CartScreen(
             }
 
             item {
-                DeliveryInfoBox()
-            }
+                DeliveryInfoBox(
+                    onAddressChange = { address = it },
+                    onPaymentMethodChange = { paymentMethod = it },
+                    onBankPaymentInfoChange = { bankPaymentInfo = it },
+                    totalAmount = selectedTotal + tax + 10.0,
+                    userId = userId,
+                    onPayConfirmed = { amount ->
+                        // Deduct the amount from the user's balance in Firebase
+                        val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
+                        userRef.get().addOnSuccessListener { snapshot ->
+                            val currentBalance = snapshot.child("balance").getValue(Double::class.java) ?: 0.0
+                            val newBalance = currentBalance - amount
+                            userRef.child("balance").setValue(newBalance).addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
+                                    // Proceed with order placement
+                                    val userOrderRef = FirebaseDatabase.getInstance()
+                                        .getReference("users")
+                                        .child(userId)
+                                        .child("orders")
 
-            item {
-                Button(
-                    onClick = {
-                        val userId = sharedPref.getString("userId", "") ?: return@Button
-                        val userOrderRef = FirebaseDatabase.getInstance()
-                            .getReference("users")
-                            .child(userId)
-                            .child("orders")
+                                    val selectedItemsList = cartItems.filter { selectedItems[it.Title] == true }
+                                    val orderId = userOrderRef.push().key ?: return@addOnCompleteListener
+                                    userRef.get().addOnSuccessListener { userSnapshot ->
+                                        val fullName = userSnapshot.child("fullName").getValue(String::class.java) ?: "Unknown"
+                                        val order = Order(
+                                            id = orderId,
+                                            items = selectedItemsList,
+                                            total = calculateSelectedTotal(cartItems, selectedItems),
+                                            tax = tax,
+                                            deliveryFee = 10.0,
+                                            status = "Wait Confirmed",
+                                            userId = userId,
+                                            userName = fullName,
+                                            address = address,
+                                            paymentMethod = paymentMethod,
+                                            bankPaymentInfo = if (paymentMethod == "Bank Payment") bankPaymentInfo else null
+                                        )
 
-                        val selectedItemsList = cartItems.filter { selectedItems[it.Title] == true }
-
-                        // ✅ Kiểm tra nếu chưa chọn món nào
-                        if (selectedItemsList.isEmpty()) {
-                            Toast.makeText(context, "Bạn chưa chọn món nào để đặt hàng.", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-
-                        val orderId = userOrderRef.push().key ?: return@Button
-                        val order = Order(
-                            id = orderId,
-                            items = selectedItemsList,
-                            total = calculateSelectedTotal(cartItems, selectedItems),
-                            tax = tax,
-                            deliveryFee = 10.0,
-                            status = "Wait Confirmed",
-                            userId = userId
-                        )
-
-                        userOrderRef.child(orderId).setValue(order).addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                Toast.makeText(context, "Đặt hàng thành công!", Toast.LENGTH_SHORT).show()
-                                onBackClick()
-                            } else {
-                                Toast.makeText(context, "Lỗi khi đặt hàng!", Toast.LENGTH_SHORT).show()
+                                        userOrderRef.child(orderId).setValue(order).addOnCompleteListener { orderTask ->
+                                            if (orderTask.isSuccessful) {
+                                                Toast.makeText(context, "Đặt hàng thành công!", Toast.LENGTH_SHORT).show()
+                                                onBackClick()
+                                            } else {
+                                                Toast.makeText(context, "Lỗi khi đặt hàng!", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Toast.makeText(context, "Lỗi khi cập nhật số dư!", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = colorResource(R.color.darkPurple))
-                ) {
-                    Text(
-                        text = "Place Order",
-                        color = colorResource(R.color.white),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    }
+                )
+            }
+
+            // "Place Order" button only shown if payment method is not Bank Payment
+            if (paymentMethod != "Bank Payment") {
+                item {
+                    Button(
+                        onClick = {
+                            val userOrderRef = FirebaseDatabase.getInstance()
+                                .getReference("users")
+                                .child(userId)
+                                .child("orders")
+
+                            val selectedItemsList = cartItems.filter { selectedItems[it.Title] == true }
+
+                            // ✅ Kiểm tra nếu chưa chọn món nào
+                            if (selectedItemsList.isEmpty()) {
+                                Toast.makeText(context, "Bạn chưa chọn món nào để đặt hàng.", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+
+                            val orderId = userOrderRef.push().key ?: return@Button
+                            // Fetch userName from Firebase
+                            val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
+                            userRef.get().addOnSuccessListener { snapshot ->
+                                val fullName = snapshot.child("fullName").getValue(String::class.java) ?: "Unknown"
+                                val order = Order(
+                                    id = orderId,
+                                    items = selectedItemsList,
+                                    total = calculateSelectedTotal(cartItems, selectedItems),
+                                    tax = tax,
+                                    deliveryFee = 10.0,
+                                    status = "Wait Confirmed",
+                                    userId = userId,
+                                    userName = fullName,
+                                    address = address,
+                                    paymentMethod = paymentMethod,
+                                    bankPaymentInfo = if (paymentMethod == "Bank Payment") bankPaymentInfo else null
+                                )
+
+                                userOrderRef.child(orderId).setValue(order).addOnCompleteListener { task ->
+                                    if (task.isSuccessful) {
+                                        Toast.makeText(context, "Đặt hàng thành công!", Toast.LENGTH_SHORT).show()
+                                        onBackClick()
+                                    } else {
+                                        Toast.makeText(context, "Lỗi khi đặt hàng!", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        colors = ButtonDefaults.buttonColors(backgroundColor = colorResource(R.color.darkPurple))
+                    ) {
+                        Text(
+                            text = "Place Order",
+                            color = colorResource(R.color.white),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

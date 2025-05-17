@@ -27,12 +27,11 @@ class MainRepository {
                         list.add(it)
                     }
                 }
-                Log.d("MainRepository", "Loaded ${list.size} categories")
                 listData.postValue(list)
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Log.e("MainRepository", "Firebase error in loadCategory: ${error.message}")
+                Log.e("MainRepository", "Firebase error: ${error.message}")
             }
         })
         return listData
@@ -50,12 +49,11 @@ class MainRepository {
                         list.add(it)
                     }
                 }
-                Log.d("MainRepository", "Loaded ${list.size} banners")
                 listData.postValue(list)
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Log.e("MainRepository", "Firebase error in loadBanner: ${error.message}")
+                Log.e("MainRepository", "Firebase error: ${error.message}")
             }
         })
         return listData
@@ -67,7 +65,6 @@ class MainRepository {
         val query: Query = ref.orderByChild("CategoryId").equalTo(id)
         query.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                Log.d("MainRepository", "Data changed for CategoryId: $id")
                 val lists = mutableListOf<FoodModel>()
                 for (childSnapshot in snapshot.children) {
                     val list = childSnapshot.getValue(FoodModel::class.java)?.apply {
@@ -76,17 +73,16 @@ class MainRepository {
                             Id = key
                         }
                     }
-                    if (list != null) {
-                        Log.d("MainRepository", "Loaded product: $list")
+                    if (list != null && list.CategoryId == id) {
                         lists.add(list)
                     }
                 }
-                Log.d("MainRepository", "Loaded ${lists.size} products for CategoryId: $id")
+                Log.d("MainRepository", "Filtered items for CategoryId $id: $lists")
                 listData.postValue(lists)
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Log.e("MainRepository", "Firebase error in loadFiltered: ${error.message}")
+                Log.e("MainRepository", "Firebase error: ${error.message}")
             }
         })
         return listData
@@ -96,13 +92,22 @@ class MainRepository {
         val counterRef = firebaseDatabase.getReference("FoodCounter")
         counterRef.runTransaction(object : com.google.firebase.database.Transaction.Handler {
             override fun doTransaction(currentData: com.google.firebase.database.MutableData): com.google.firebase.database.Transaction.Result {
+                // Lấy giá trị hiện tại, mặc định là 0 nếu null
                 val currentValue = currentData.getValue(Int::class.java) ?: 0
                 val newId = currentValue + 1
                 currentData.value = newId
+
+                // Kiểm tra dữ liệu FoodModel
+                if (food.Title.isEmpty() || food.CategoryId.isEmpty() || food.Price <= 0.0) {
+                    Log.e("MainRepository", "Dữ liệu sản phẩm không hợp lệ: $food")
+                    return com.google.firebase.database.Transaction.abort()
+                }
+
+                // Ghi sản phẩm mới vào Foods
                 val ref = firebaseDatabase.getReference("Foods/$newId")
                 val newFood = food.copy(Id = newId)
                 ref.setValue(newFood)
-                Log.d("MainRepository", "Added product: $newFood")
+
                 return com.google.firebase.database.Transaction.success(currentData)
             }
 
@@ -112,32 +117,53 @@ class MainRepository {
                 currentData: DataSnapshot?
             ) {
                 if (error != null) {
-                    Log.e("MainRepository", "Transaction error in addProduct: ${error.message}")
+                    Log.e("MainRepository", "Lỗi giao dịch: ${error.message}")
+                } else if (committed) {
+                    Log.d("MainRepository", "Thêm sản phẩm thành công, FoodCounter: ${currentData?.getValue(Int::class.java)}")
                 } else {
-                    Log.d("MainRepository", "Product added successfully")
+                    Log.w("MainRepository", "Giao dịch bị hủy, không thêm sản phẩm")
                 }
             }
         })
     }
 
     fun updateProduct(food: FoodModel) {
-        Log.d("MainRepository", "Updating product: $food")
+        if (food.Id == 0 || food.CategoryId.isEmpty() || food.Title.isEmpty() || food.Price <= 0.0) {
+            Log.e("MainRepository", "Dữ liệu sản phẩm không hợp lệ: $food")
+            return
+        }
+
+        val updates = mapOf(
+            "CategoryId" to food.CategoryId,
+            "Title" to food.Title,
+            "Price" to food.Price,
+            "ImagePath" to food.ImagePath,
+            "Description" to food.Description,
+            "BestFood" to food.BestFood,
+            "LocationId" to food.LocationId,
+            "PriceId" to food.PriceId,
+            "TimeId" to food.TimeId,
+            "Calorie" to food.Calorie,
+            "Star" to food.Star,
+            "TimeValue" to food.TimeValue
+            // Không cập nhật numberInCart vì nó có thể liên quan đến giỏ hàng
+        )
+
         val ref = firebaseDatabase.getReference("Foods/${food.Id}")
-        ref.setValue(food).addOnCompleteListener { task ->
+        ref.updateChildren(updates).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Log.d("MainRepository", "Product updated successfully")
+                Log.d("MainRepository", "Cập nhật sản phẩm thành công: ${food.Id}")
             } else {
-                Log.e("MainRepository", "Failed to update product: ${task.exception?.message}")
+                Log.e("MainRepository", "Cập nhật sản phẩm thất bại: ${task.exception?.message}")
             }
         }
     }
 
     fun deleteProduct(foodId: Int) {
-        Log.d("MainRepository", "Deleting product with Id: $foodId")
         val ref = firebaseDatabase.getReference("Foods/$foodId")
         ref.removeValue().addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Log.d("MainRepository", "Product deleted successfully")
+                Log.d("MainRepository", "Product deleted successfully: $foodId")
             } else {
                 Log.e("MainRepository", "Failed to delete product: ${task.exception?.message}")
             }
