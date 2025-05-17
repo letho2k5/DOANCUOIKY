@@ -53,7 +53,7 @@ fun TopBar(){
         ){
             Text(text= buildAnnotatedString {
                 withStyle(style = SpanStyle(color = Color.Red)){
-                    append("FoodApp")
+                    append("Kebab Ngon")
                 }
             }
                 , fontWeight= FontWeight.Bold,
