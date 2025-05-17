@@ -64,8 +64,9 @@ private fun DetailScreen(
                     top.linkTo(parent.top)
                     end.linkTo(parent.end)
                     start.linkTo(parent.start)
+                    bottom.linkTo(footer.top) // Đảm bảo không bị footer che
                 }
-                .padding(bottom = 80.dp)
+                .padding(bottom = 180.dp)
         ) {
             HeaderSection(
                 item = item,
@@ -82,8 +83,13 @@ private fun DetailScreen(
                     }
                 }
             )
+
             DescriptionSection(description = item.Description, foodId = item.Id.toString())
+
+            // ⭐ Thêm đánh giá vào đây, cuộn cùng nội dung
+            ReviewSection(foodId = item.Id)
         }
+
         FooterSection(
             onAddToCartClick,
             totalPrice = (item.Price * numberInCart),
