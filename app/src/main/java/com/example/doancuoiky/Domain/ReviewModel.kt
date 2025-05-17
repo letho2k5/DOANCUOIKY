@@ -8,5 +8,6 @@ data class ReviewModel(
     var parentReviewId: String? = null, // Firebase key of the parent review (null for top-level reviews)
     var reviewId: String? = null, // Firebase key of this review
     var uid: String? = null, // UID to identify the user who wrote the review
-    var timestamp: Long = 0L // Epoch time in milliseconds when the review was posted
+    var timestamp: Long = 0L, // Epoch time in milliseconds when the review was posted
+    var imageUrl: String? = null // URL of the image uploaded to Cloudinary
 )

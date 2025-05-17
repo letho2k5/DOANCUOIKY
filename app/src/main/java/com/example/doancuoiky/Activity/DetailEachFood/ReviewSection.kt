@@ -1,6 +1,16 @@
 package com.example.doancuoiky.Activity.DetailEachFood
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +33,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import coil.compose.rememberAsyncImagePainter
 import com.example.doancuoiky.Domain.ReviewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -31,17 +43,40 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import android.widget.Toast
 import androidx.compose.ui.text.style.TextOverflow
-import java.text.SimpleDateFormat
+import com.cloudinary.android.MediaManager
+import com.cloudinary.android.callback.ErrorInfo
+import com.cloudinary.android.callback.UploadCallback
 import java.util.*
 
 @Composable
 fun ReviewSection(foodId: Int, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var isCloudinaryInitialized by remember { mutableStateOf(false) }
+
+    // Initialize Cloudinary with correct credentials
+    LaunchedEffect(Unit) {
+        if (!isCloudinaryInitialized) {
+            try {
+                val config = mapOf(
+                    "cloud_name" to "djrlah4ry",
+                    "api_key" to "847946367387831",
+                    "api_secret" to "W25CO72-QmqlG1Nz1JBsLv7achU"
+                )
+                MediaManager.init(context, config)
+                isCloudinaryInitialized = true
+                Log.d("Cloudinary", "Cloudinary initialized successfully")
+            } catch (e: Exception) {
+                Log.e("Cloudinary", "Failed to initialize Cloudinary: ${e.message}")
+                Toast.makeText(context, "Không thể kết nối với Cloudinary", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     var reviews by remember { mutableStateOf<List<ReviewModel>>(emptyList()) }
-    var userNames by remember { mutableStateOf<Map<String, String>>(emptyMap()) } // Store fullName by uid
-    var replyingTo by remember { mutableStateOf<String?>(null) } // Store reviewId of the review being replied to
+    var userNames by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var replyingTo by remember { mutableStateOf<String?>(null) }
     val currentUser = FirebaseAuth.getInstance().currentUser
 
-    // Fetch fullName for all users who have reviews
     LaunchedEffect(reviews) {
         val uids = reviews.mapNotNull { it.uid }.distinct()
         val namesMap = mutableMapOf<String, String>()
@@ -80,10 +115,11 @@ fun ReviewSection(foodId: Int, modifier: Modifier = Modifier) {
             foodId = foodId,
             onReviewSubmitted = {
                 loadReviews()
-                replyingTo = null // Reset reply state after submission
+                replyingTo = null
             },
             currentUser = currentUser?.uid,
-            replyingTo = replyingTo
+            replyingTo = replyingTo,
+            context = context
         )
 
         val userReviews = reviews.filter { !it.isPharmacist && it.parentReviewId == null }
@@ -100,7 +136,6 @@ fun ReviewSection(foodId: Int, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        // Display top-level reviews and their nested replies
         userReviews.forEach { review ->
             val displayName = if (review.uid == currentUser?.uid) {
                 "Bạn"
@@ -130,15 +165,8 @@ fun ReviewItem(
     userNames: Map<String, String>,
     currentUser: com.google.firebase.auth.FirebaseUser?
 ) {
-    val currentTime = Calendar.getInstance().apply {
-        timeInMillis = System.currentTimeMillis()
-        set(Calendar.HOUR_OF_DAY, 17) // 05:14 PM
-        set(Calendar.MINUTE, 14)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
-
-    val timeDiffMillis = currentTime - review.timestamp
+    val currentTime = System.currentTimeMillis()
+    val timeDiffMillis = currentTime - (review.timestamp.takeIf { it > 0 } ?: currentTime)
     val timeDiffHours = timeDiffMillis / (1000 * 60 * 60)
     val timeDiffDays = timeDiffMillis / (1000 * 60 * 60 * 24)
     val elapsedTime = when {
@@ -161,9 +189,8 @@ fun ReviewItem(
             verticalAlignment = Alignment.Top,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Avatar
             Image(
-                painter = painterResource(id = android.R.drawable.ic_menu_myplaces), // Placeholder avatar
+                painter = painterResource(id = android.R.drawable.ic_menu_myplaces),
                 contentDescription = "Avatar",
                 modifier = Modifier
                     .size(40.dp)
@@ -172,14 +199,11 @@ fun ReviewItem(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // User name
                     Text(
                         text = displayName,
                         fontWeight = FontWeight.Bold,
@@ -188,8 +212,6 @@ fun ReviewItem(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
-                    // Timestamp
                     Text(
                         text = elapsedTime,
                         fontSize = 12.sp,
@@ -197,7 +219,6 @@ fun ReviewItem(
                     )
                 }
 
-                // Rating (for top-level reviews only)
                 if (review.parentReviewId == null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -219,14 +240,23 @@ fun ReviewItem(
                     }
                 }
 
-                // Comment
                 Text(
                     text = review.comment,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(top = 4.dp)
                 )
 
-                // Reply button (hidden for current user's reviews)
+                if (!review.imageUrl.isNullOrEmpty()) {
+                    Image(
+                        painter = rememberAsyncImagePainter(review.imageUrl),
+                        contentDescription = "Review Image",
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .size(100.dp)
+                            .clip(CircleShape)
+                    )
+                }
+
                 if (review.uid != currentUser?.uid) {
                     TextButton(
                         onClick = { setReplyingTo(review.reviewId ?: "") },
@@ -242,7 +272,6 @@ fun ReviewItem(
             }
         }
 
-        // Display nested replies
         val replies = reviews.filter { it.parentReviewId == review.reviewId }
         replies.forEach { reply ->
             val replyDisplayName = if (reply.uid == currentUser?.uid) {
@@ -268,14 +297,70 @@ fun ReviewInputSection(
     foodId: Int,
     onReviewSubmitted: () -> Unit,
     currentUser: String?,
-    replyingTo: String? = null
+    replyingTo: String? = null,
+    context: Context
 ) {
-    val context = LocalContext.current
     var comment by remember { mutableStateOf("") }
     var rating by remember { mutableStateOf(5f) }
     var userFullName by remember { mutableStateOf("Người dùng") }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var imageUrl by remember { mutableStateOf<String?>(null) }
+    var isUploading by remember { mutableStateOf(false) }
 
-    // Fetch fullName of the current user
+    // Determine the appropriate permission based on Android version
+    val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+
+    // Image picker launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        selectedImageUri = uri
+        Log.d("Cloudinary", "Selected URI: $uri")
+        uri?.let {
+            if (isNetworkAvailable(context)) {
+                isUploading = true
+                Toast.makeText(context, "Đang tải ảnh lên...", Toast.LENGTH_SHORT).show()
+                uploadImageToCloudinary(context, it) { url ->
+                    imageUrl = url
+                    isUploading = false
+                    if (url != null) {
+                        Toast.makeText(context, "Đã tải lên", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Không thể tải ảnh lên", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                Toast.makeText(context, "Vui lòng kiểm tra kết nối internet", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Permission launcher for storage access
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            imagePickerLauncher.launch("image/*")
+        } else {
+            // Check if permission is permanently denied
+            if (!shouldShowRequestPermissionRationale(context, storagePermission)) {
+                Toast.makeText(
+                    context,
+                    "Quyền truy cập ảnh bị từ chối vĩnh viễn. Vui lòng cấp quyền trong Cài đặt.",
+                    Toast.LENGTH_LONG
+                ).show()
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", context.packageName, null)
+                }
+                context.startActivity(intent)
+            } else {
+                Toast.makeText(context, "Cần quyền truy cập để chọn ảnh", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
             FirebaseDatabase.getInstance().getReference("users")
@@ -318,6 +403,42 @@ fun ReviewInputSection(
             )
         }
 
+        Button(
+            onClick = {
+                when {
+                    ContextCompat.checkSelfPermission(context, storagePermission) == PackageManager.PERMISSION_GRANTED -> {
+                        imagePickerLauncher.launch("image/*")
+                    }
+                    shouldShowRequestPermissionRationale(context, storagePermission) -> {
+                        Toast.makeText(
+                            context,
+                            "Ứng dụng cần quyền truy cập ảnh để chọn hình. Vui lòng cấp quyền.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        permissionLauncher.launch(storagePermission)
+                    }
+                    else -> {
+                        permissionLauncher.launch(storagePermission)
+                    }
+                }
+            },
+            modifier = Modifier.padding(top = 8.dp),
+            enabled = !isUploading
+        ) {
+            Text(if (isUploading) "Đang tải ảnh..." else "Chọn ảnh")
+        }
+
+        if (imageUrl != null) {
+            Image(
+                painter = rememberAsyncImagePainter(imageUrl),
+                contentDescription = "Selected Image",
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .size(100.dp)
+                    .clip(CircleShape)
+            )
+        }
+
         Row(
             modifier = Modifier.padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -332,7 +453,8 @@ fun ReviewInputSection(
                             isPharmacist = false,
                             parentReviewId = replyingTo,
                             uid = currentUser,
-                            timestamp = System.currentTimeMillis()
+                            timestamp = System.currentTimeMillis(),
+                            imageUrl = imageUrl
                         )
                         submitReview(foodId, newReview) { reviewId ->
                             newReview.reviewId = reviewId
@@ -341,10 +463,13 @@ fun ReviewInputSection(
                         }
                         comment = ""
                         rating = 5f
+                        selectedImageUri = null
+                        imageUrl = null
                     } else {
                         Toast.makeText(context, "Vui lòng đăng nhập!", Toast.LENGTH_SHORT).show()
                     }
-                }
+                },
+                enabled = !isUploading
             ) {
                 Text(if (replyingTo == null) "Gửi đánh giá" else "Gửi trả lời")
             }
@@ -354,6 +479,58 @@ fun ReviewInputSection(
                 }
             }
         }
+    }
+}
+
+// Helper function to check if permission rationale should be shown
+private fun shouldShowRequestPermissionRationale(context: Context, permission: String): Boolean {
+    return androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
+        context as androidx.activity.ComponentActivity,
+        permission
+    )
+}
+
+// Helper function to check network availability
+private fun isNetworkAvailable(context: Context): Boolean {
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val activeNetwork = connectivityManager.activeNetworkInfo
+    return activeNetwork?.isConnectedOrConnecting == true
+}
+
+private fun uploadImageToCloudinary(context: Context, uri: Uri, onComplete: (String?) -> Unit) {
+    try {
+        Log.d("Cloudinary", "Starting upload with URI: $uri")
+        MediaManager.get().upload(uri)
+            .option("folder", "reviews") // Organize images in a folder
+            .option("public_id", "review_${System.currentTimeMillis()}") // Unique public ID
+            .callback(object : UploadCallback {
+                override fun onStart(requestId: String) {
+                    Log.d("Cloudinary", "Upload started: $requestId")
+                }
+
+                override fun onProgress(requestId: String, bytes: Long, totalBytes: Long) {
+                    Log.d("Cloudinary", "Upload progress: $bytes/$totalBytes")
+                }
+
+                override fun onSuccess(requestId: String, resultData: Map<*, *>) {
+                    val imageUrl = resultData["secure_url"] as String
+                    Log.d("Cloudinary", "Upload success: $imageUrl")
+                    onComplete(imageUrl)
+                }
+
+                override fun onError(requestId: String, error: ErrorInfo) {
+                    Log.e("Cloudinary", "Upload error: ${error.description}")
+                    onComplete(null)
+                }
+
+                override fun onReschedule(requestId: String, error: ErrorInfo) {
+                    Log.w("Cloudinary", "Upload rescheduled: ${error.description}")
+                }
+            })
+            .dispatch()
+    } catch (e: Exception) {
+        Log.e("Cloudinary", "Upload exception: ${e.message}")
+        onComplete(null)
     }
 }
 
@@ -367,8 +544,9 @@ fun fetchReviewsForFood(foodId: Int, onComplete: (List<ReviewModel>) -> Unit) {
             for (child in snapshot.children) {
                 val review = child.getValue(ReviewModel::class.java)
                 if (review != null) {
-                    review.reviewId = child.key // Assign Firebase key to reviewId
+                    review.reviewId = child.key
                     reviews.add(review)
+                    Log.d("fetchReviewsForFood", "Fetched review with timestamp: ${review.timestamp}")
                 }
             }
             Log.d("ReviewSection", "Fetched ${reviews.size} reviews")
@@ -388,7 +566,7 @@ fun submitReview(foodId: Int, review: ReviewModel, onComplete: (String) -> Unit)
     val newReviewRef = ref.push()
     newReviewRef.setValue(review).addOnCompleteListener { task ->
         if (task.isSuccessful) {
-            Log.d("ReviewSection", "Review/reply submitted successfully with ID: ${newReviewRef.key}")
+            Log.d("ReviewSection", "Review/reply submitted successfully with ID: ${newReviewRef.key} and timestamp: ${review.timestamp}")
             onComplete(newReviewRef.key ?: "")
         } else {
             Log.e("ReviewSection", "Error submitting review/reply: ${task.exception?.message}")
