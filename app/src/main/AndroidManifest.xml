@@ -93,6 +93,9 @@
         <activity
             android:name=".Activity.Admin.Food.AdminCategoryActivity"
             android:exported="true" />
+        <activity
+            android:name=".Activity.Admin.RevenueScreen"
+            android:exported="true" />
     </application>
 
 </manifest>

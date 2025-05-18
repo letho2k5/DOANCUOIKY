@@ -70,7 +70,7 @@ fun AdminScreen() {
                 context.startActivity(Intent(context, OrderAdActivity::class.java))
             }
             ActionCard("Revenue", painterResource(id = R.drawable.revenue_icon)) {
-                // Handle Revenue click
+                context.startActivity(Intent(context, RevenueScreen::class.java))
             }
             ActionCard("Account", painterResource(id = R.drawable.user_icon)) {
                 context.startActivity(Intent(context, UserActivity::class.java))
