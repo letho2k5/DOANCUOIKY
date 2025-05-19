@@ -89,47 +89,39 @@ class MainRepository {
     }
 
     fun addProduct(food: FoodModel) {
-        val counterRef = firebaseDatabase.getReference("FoodCounter")
-        counterRef.runTransaction(object : com.google.firebase.database.Transaction.Handler {
-            override fun doTransaction(currentData: com.google.firebase.database.MutableData): com.google.firebase.database.Transaction.Result {
-                // Lấy giá trị hiện tại, mặc định là 0 nếu null
-                val currentValue = currentData.getValue(Int::class.java) ?: 0
-                val newId = currentValue + 1
-                currentData.value = newId
+        // Validate input data
+        if (food.Title.isEmpty() || food.CategoryId.isEmpty() || food.Price <= 0.0) {
+            Log.e("MainRepository", "Invalid product data: $food")
+            return
+        }
 
-                // Kiểm tra dữ liệu FoodModel
-                if (food.Title.isEmpty() || food.CategoryId.isEmpty() || food.Price <= 0.0) {
-                    Log.e("MainRepository", "Dữ liệu sản phẩm không hợp lệ: $food")
-                    return com.google.firebase.database.Transaction.abort()
-                }
-
-                // Ghi sản phẩm mới vào Foods
-                val ref = firebaseDatabase.getReference("Foods/$newId")
-                val newFood = food.copy(Id = newId)
-                ref.setValue(newFood)
-
-                return com.google.firebase.database.Transaction.success(currentData)
+        // Generate a unique key for the new product
+        val newKey = firebaseDatabase.getReference("Foods").push().key
+            ?: run {
+                Log.e("MainRepository", "Failed to generate new key")
+                return
             }
 
-            override fun onComplete(
-                error: DatabaseError?,
-                committed: Boolean,
-                currentData: DataSnapshot?
-            ) {
-                if (error != null) {
-                    Log.e("MainRepository", "Lỗi giao dịch: ${error.message}")
-                } else if (committed) {
-                    Log.d("MainRepository", "Thêm sản phẩm thành công, FoodCounter: ${currentData?.getValue(Int::class.java)}")
-                } else {
-                    Log.w("MainRepository", "Giao dịch bị hủy, không thêm sản phẩm")
-                }
+        // Convert key to integer ID (for compatibility with existing integer Id field)
+        val newId = newKey.hashCode()
+
+        // Create new FoodModel with generated ID
+        val newFood = food.copy(Id = newId)
+
+        // Save to Firebase
+        val ref = firebaseDatabase.getReference("Foods/$newId")
+        ref.setValue(newFood)
+            .addOnSuccessListener {
+                Log.d("MainRepository", "Product added successfully with ID: $newId")
             }
-        })
+            .addOnFailureListener { error ->
+                Log.e("MainRepository", "Failed to add product: ${error.message}")
+            }
     }
 
     fun updateProduct(food: FoodModel) {
         if (food.Id == 0 || food.CategoryId.isEmpty() || food.Title.isEmpty() || food.Price <= 0.0) {
-            Log.e("MainRepository", "Dữ liệu sản phẩm không hợp lệ: $food")
+            Log.e("MainRepository", "Invalid product data: $food")
             return
         }
 

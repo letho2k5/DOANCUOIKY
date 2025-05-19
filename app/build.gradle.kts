@@ -84,4 +84,9 @@ dependencies {
 
     implementation ("com.cloudinary:cloudinary-android:2.2.0")
 
+    // Retrofit and Gson converter
+    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+    // Kotlin coroutines for suspend functions
+    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }
