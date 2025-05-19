@@ -84,7 +84,7 @@ fun Search(context: Context) {
             },
             label = {
                 Text(
-                    text = "Bạn muốn ăn gì?",
+                    text = "What do you want to eat?",
                     fontStyle = FontStyle.Italic,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.DarkGray

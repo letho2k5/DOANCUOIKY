@@ -21,82 +21,130 @@ import com.example.doancuoiky.Activity.Admin.Order.OrderAdHistoryActivity
 import com.example.doancuoiky.Activity.Admin.User.UserActivity
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.doancuoiky.R
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import com.example.doancuoiky.Activity.Auth.LoginActivity
+import androidx.compose.runtime.*
+
 
 @Composable
 fun AdminScreen() {
     val context = LocalContext.current
+    var showDialog by remember { mutableStateOf(false) } // trạng thái hiển thị hộp thoại
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = {
+                Text(text = "Logout")
+            },
+            text = {
+                Text("Do you want to log out?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDialog = false
+                        context.startActivity(Intent(context, LoginActivity::class.java))
+                    }
+                ) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Header
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "Kebab Ngon",
-                fontSize = 20.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
             Icon(
-                painter = painterResource(id = R.drawable.bell_icon),
-                contentDescription = "Notifications",
+                painter = painterResource(id = R.drawable.ic_logout),
+                contentDescription = "Logout",
                 modifier = Modifier
-                    .size(24.dp)
-                    .clickable { }
+                    .size(28.dp)
+                    .clickable {
+                        showDialog = true // hiển thị hộp thoại khi bấm
+                    }
             )
         }
+
         Text(
             text = "Fast Order - Big Flavor - Kebab Ngon NOW!",
-            fontSize = 12.sp,
-            color = Color.Gray,
-            modifier = Modifier.padding(bottom = 16.dp)
+            fontSize = 14.sp,
+            color = Color.Gray
         )
+
+        // Banner
         BannerSection()
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
+
+        // Action Cards Grid
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            ActionCard("Category", painterResource(id = R.drawable.category_icon)) {
-                context.startActivity(Intent(context, AdminCategoryActivity::class.java))
-            }
-            ActionCard("Order", painterResource(id = R.drawable.order_icon)) {
-                context.startActivity(Intent(context, OrderAdActivity::class.java))
-            }
-            ActionCard("Revenue", painterResource(id = R.drawable.revenue_icon)) {
-                context.startActivity(Intent(context, RevenueScreen::class.java))
-            }
-            ActionCard("Account", painterResource(id = R.drawable.user_icon)) {
-                context.startActivity(Intent(context, UserActivity::class.java))
+            items(4) { index ->
+                when (index) {
+                    0 -> ActionCard("Category", painterResource(id = R.drawable.category_icon)) {
+                        context.startActivity(Intent(context, AdminCategoryActivity::class.java))
+                    }
+                    1 -> ActionCard("Order", painterResource(id = R.drawable.order_icon)) {
+                        context.startActivity(Intent(context, OrderAdActivity::class.java))
+                    }
+                    2 -> ActionCard("Revenue", painterResource(id = R.drawable.revenue_icon)) {
+                        context.startActivity(Intent(context, RevenueScreen::class.java))
+                    }
+                    3 -> ActionCard("Account", painterResource(id = R.drawable.user_icon)) {
+                        context.startActivity(Intent(context, UserActivity::class.java))
+                    }
+                }
             }
         }
     }
 }
+
 
 @Composable
 fun BannerSection() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(150.dp),
-        shape = RoundedCornerShape(10.dp),
+            .height(140.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5E8C7))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .padding(16.dp)
+                    .padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = "First order 30% off",
-                    fontSize = 16.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
@@ -106,7 +154,7 @@ fun BannerSection() {
                     color = Color.Black
                 )
                 Text(
-                    text = "the perfect your pizza journey",
+                    text = "Start your pizza journey",
                     fontSize = 14.sp,
                     color = Color.Black
                 )
@@ -114,52 +162,13 @@ fun BannerSection() {
             Button(
                 onClick = { /* Handle Order Now click */ },
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                    .align(Alignment.BottomEnd)
+                    .padding(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500)),
+                shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Order Now", color = Color.White)
+                Text("Order Now", color = Color.White, fontSize = 14.sp)
             }
-        }
-    }
-}
-
-@Composable
-fun StatCard(title: String, value: String, icon: androidx.compose.ui.graphics.painter.Painter) {
-    Card(
-        modifier = Modifier
-            .width(100.dp)
-            .height(80.dp)
-            .padding(4.dp),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                painter = icon,
-                contentDescription = title,
-                modifier = Modifier.size(24.dp),
-                tint = Color(0xFF4CAF50)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = title,
-                fontSize = 12.sp,
-                color = Color.Black
-            )
-            Text(
-                text = value,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
         }
     }
 }
@@ -168,31 +177,31 @@ fun StatCard(title: String, value: String, icon: androidx.compose.ui.graphics.pa
 fun ActionCard(title: String, icon: androidx.compose.ui.graphics.painter.Painter, onClick: () -> Unit) {
     Card(
         modifier = Modifier
-            .width(100.dp)
-            .height(80.dp)
-            .padding(4.dp)
+            .fillMaxWidth()
+            .height(100.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
+                .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
                 painter = icon,
                 contentDescription = title,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(32.dp),
                 tint = Color(0xFF4CAF50)
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = title,
-                fontSize = 12.sp,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
                 color = Color.Black
             )
         }

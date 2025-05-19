@@ -94,7 +94,7 @@ fun SplashScreen(
 
             // Logo Image
             Image(
-                painter = painterResource(id = R.drawable.pizza),
+                painter = painterResource(id = R.drawable.br),
                 contentDescription = null,
                 modifier = Modifier
                     .constrainAs(logoImg) {
